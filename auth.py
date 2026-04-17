@@ -139,7 +139,7 @@ async def github_callback(request: Request, code: str, state: str):
     # Create JWT and set as httpOnly cookie
     token = create_jwt(user.id, github_login)
     response = RedirectResponse("/")
-    is_prod = not request.url.hostname in ("localhost", "127.0.0.1")
+    is_prod = request.url.scheme == "https"
     response.set_cookie(
         "token", token,
         max_age=JWT_EXPIRE_DAYS * 86400,
