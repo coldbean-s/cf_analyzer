@@ -39,8 +39,12 @@ SHARED_CF_PROFILE = Path(__file__).parent / "data" / "cf_browser_profiles" / "sh
 CHROME_SEMAPHORE = asyncio.Semaphore(config.MAX_CHROME_INSTANCES)
 
 
+_main_loop = None
+
 @app.on_event("startup")
 async def startup():
+    global _main_loop
+    _main_loop = asyncio.get_running_loop()
     await db.init_db()
 
 
@@ -98,8 +102,7 @@ def _sse_thread(gen_fn) -> StreamingResponse:
 
 def _sync_db(coro):
     """Call an async DB function from a sync thread."""
-    loop = asyncio.get_event_loop()
-    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    future = asyncio.run_coroutine_threadsafe(coro, _main_loop)
     return future.result(timeout=30)
 
 
