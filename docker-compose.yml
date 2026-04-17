@@ -20,7 +20,6 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-dev}@postgres:5432/cf_analyzer
-      CF_HEADLESS: "true"
     volumes:
       - ./data:/app/data  # Persist CF browser profiles
 
