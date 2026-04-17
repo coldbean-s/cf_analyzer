@@ -21,8 +21,8 @@ import db
 
 def _sync_db(coro):
     """Call an async DB function from a sync generator thread."""
-    loop = asyncio.get_event_loop()
-    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    import app as _app
+    future = asyncio.run_coroutine_threadsafe(coro, _app._main_loop)
     return future.result(timeout=30)
 
 Event = dict
@@ -248,7 +248,14 @@ def run_analysis(
         yield {"type": "error", "message": "未配置大佬 handle，请在配置页添加"}
         return
 
-    client = CFClient("", delay=delay)
+    # Use user-specific profile if available, otherwise shared profile
+    if user_id:
+        profile = Path(__file__).parent / "data" / "cf_browser_profiles" / str(user_id)
+        if not profile.exists():
+            profile = Path(__file__).parent / "data" / "cf_browser_profiles" / "shared"
+    else:
+        profile = Path(__file__).parent / "data" / "cf_browser_profiles" / "shared"
+    client = CFClient("", delay=delay, profile_dir=profile)
 
     try:
         llm = LLMClient(cfg)
