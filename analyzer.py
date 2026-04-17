@@ -209,6 +209,7 @@ def run_analysis(
     user_lang: str,
     user_cfg: dict | None = None,
     user_id: int | None = None,
+    live_progress=None,
 ) -> Generator[Event, None, None]:
     """
     Synchronous generator. Yields event dicts:
@@ -267,11 +268,18 @@ def run_analysis(
 
     # --- 打开比赛 status 页，通过 CF challenge，browser 就绪后复用 ---
     CF_BASE = "https://codeforces.com"
+
+    def _live(msg):
+        if live_progress:
+            live_progress({"type": "progress", "message": msg})
+
     yield {"type": "progress", "message": f"打开比赛页面，等待 Cloudflare 验证…"}
     try:
         page = client._get_page()
+        _live("浏览器已启动，正在加载页面…")
         page.goto(f"{CF_BASE}/contest/{contest_id}/status", wait_until="load", timeout=60000)
-        client._wait_cf_challenge(page, timeout=90.0)
+        _live("页面已加载，等待 Cloudflare 放行…")
+        client._wait_cf_challenge(page, timeout=90.0, on_progress=_live)
         yield {"type": "progress", "message": "Cloudflare 验证通过 ✓"}
     except Exception as e:
         yield {"type": "error", "message": f"打开比赛页面失败：{e}"}
@@ -295,7 +303,7 @@ def run_analysis(
     boss_info = None
     yield {"type": "progress", "message": f"寻找大佬代码（{', '.join(lgm_handles[:3])}…）"}
     try:
-        sub = client.find_handle_submission(contest_id, problem_index, lgm_handles, lang_filter, problem_name=problem_name)
+        sub = client.find_handle_submission(contest_id, problem_index, lgm_handles, lang_filter, problem_name=problem_name, on_progress=_live)
         if not sub:
             yield {"type": "error", "message": "大佬列表中无人解答此题（或语言不符），分析终止"}
             return

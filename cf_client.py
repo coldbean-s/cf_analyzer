@@ -69,7 +69,7 @@ class CFClient:
     # CF challenge helpers                                                 #
     # ------------------------------------------------------------------ #
 
-    def _wait_cf_challenge(self, page: Page, timeout: float = 60.0) -> None:
+    def _wait_cf_challenge(self, page: Page, timeout: float = 60.0, on_progress=None) -> None:
         """Wait for Cloudflare interstitial pages to fully resolve.
 
         Handles:
@@ -84,7 +84,16 @@ class CFClient:
             "verification", "checking your browser",
             "请稍候", "正在验证", "安全验证", "正在进行", "请等待",
         ]
-        deadline = time.time() + timeout
+        start = time.time()
+        deadline = start + timeout
+        last_report = 0
+
+        def _report(phase):
+            nonlocal last_report
+            elapsed = int(time.time() - start)
+            if on_progress and elapsed >= last_report + 5:
+                last_report = elapsed
+                on_progress(f"Cloudflare 验证中… ({elapsed}s，{phase})")
 
         # Phase 1: wait until page has a title AND no challenge keywords
         # Check both HTML source and visible text (CF challenge text is JS-rendered)
@@ -103,6 +112,7 @@ class CFClient:
             combined = title + " " + html_snippet + " " + visible_text
             if not any(kw in combined for kw in cf_keywords):
                 break
+            _report("等待页面响应")
             time.sleep(0.5)
 
         # Phase 2: wait for load + confirm it's a real CF page (no challenge text anywhere)
@@ -123,6 +133,7 @@ class CFClient:
                     and title
                     and not any(kw in title or kw in visible_text for kw in cf_keywords)):
                 break
+            _report("验证页面内容")
             time.sleep(1)
 
         # Phase 3: settle time for JS rendering
@@ -263,6 +274,7 @@ class CFClient:
         handles: list[str],
         language_filter: str | None = None,
         problem_name: str | None = None,
+        on_progress=None,
     ) -> dict | None:
         """Find an AC submission from one of the handles.
 
@@ -275,7 +287,9 @@ class CFClient:
             return language_filter is None or language_filter.lower() in s["programmingLanguage"].lower()
 
         pname_lower = problem_name.strip().lower()
-        for handle in handles:
+        for i, handle in enumerate(handles):
+            if on_progress:
+                on_progress(f"查找 {handle} 的 AC（{i+1}/{len(handles)}）…")
             print(f"[*] 查找 {handle} 的 AC...")
             try:
                 subs = self._api("user.status", {

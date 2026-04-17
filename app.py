@@ -157,16 +157,20 @@ async def analyze(req: AnalyzeRequest, user: db.User = Depends(require_user)):
     loop = asyncio.get_running_loop()
     q: asyncio.Queue = asyncio.Queue()
 
+    def _push(event):
+        loop.call_soon_threadsafe(q.put_nowait, event)
+
     def worker():
         try:
             from analyzer import run_analysis
             for event in run_analysis(req.problem, req.user_code, req.user_lang,
-                                     user_cfg=cfg, user_id=user.id):
-                loop.call_soon_threadsafe(q.put_nowait, event)
+                                     user_cfg=cfg, user_id=user.id,
+                                     live_progress=_push):
+                _push(event)
         except Exception as e:
-            loop.call_soon_threadsafe(q.put_nowait, {"type": "error", "message": str(e)})
+            _push({"type": "error", "message": str(e)})
         finally:
-            loop.call_soon_threadsafe(q.put_nowait, None)
+            _push(None)
 
     threading.Thread(target=worker, daemon=True).start()
 
