@@ -1,12 +1,11 @@
 """
-Codeforces client using Playwright with a persistent Chrome profile.
+Codeforces client using Playwright with cookie injection.
 
 CF's login page uses Cloudflare Turnstile — automated form submission is
 blocked regardless of stealth techniques. The correct approach:
 
-  1. setup_cf (app.py): open visible Chrome, let the user log in manually.
-     Chrome stores the session in data/cf_browser_profile/.
-  2. login(): verify the saved session is still valid. Raise if not.
+  1. Run setup_cf_session.py locally to log in and export cookies to JSON.
+  2. login(): inject cookies and verify the session is still valid.
   3. API calls and source fetching: use the browser's session cookies via
      page.evaluate(fetch(...)), which carries them automatically.
 
@@ -20,14 +19,14 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, Page, BrowserContext
 
 CF_BASE = "https://codeforces.com"
-CF_PROFILE_DIR = Path(__file__).parent / "data" / "cf_browser_profile"
+CF_COOKIES_FILE = Path(__file__).parent / "data" / "cf_cookies.json"
 
 
 class CFClient:
     def __init__(self, handle: str, delay: float = 1.5, profile_dir: Path | None = None):
         self.handle = handle
         self.delay = delay
-        self.profile_dir = profile_dir or CF_PROFILE_DIR
+        self.profile_dir = profile_dir
         self._last_req = 0.0
         self._pw = None
         self._ctx: BrowserContext | None = None
@@ -45,25 +44,35 @@ class CFClient:
             return self._page
 
         import os
-        self.profile_dir.mkdir(parents=True, exist_ok=True)
         headless = os.environ.get("CF_HEADLESS", "false").lower() == "true"
         self._pw = sync_playwright().start()
-        self._ctx = self._pw.chromium.launch_persistent_context(
-            user_data_dir=str(self.profile_dir),
-            channel="chrome",
+        browser = self._pw.chromium.launch(
             headless=headless,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
                 "--window-size=1366,768",
             ],
-            viewport={"width": 1366, "height": 768},
         )
+        self._ctx = browser.new_context(viewport={"width": 1366, "height": 768})
         self._ctx.add_init_script(
             "Object.defineProperty(navigator,'webdriver',{get:()=>undefined})"
         )
+        self._load_cookies()
         self._page = self._ctx.new_page()
         return self._page
+
+    def _load_cookies(self):
+        cf = self.profile_dir / "cf_cookies.json" if self.profile_dir else None
+        for path in [cf, CF_COOKIES_FILE]:
+            if path and path.exists():
+                try:
+                    cookies = json.loads(path.read_text(encoding="utf-8"))
+                    if cookies:
+                        self._ctx.add_cookies(cookies)
+                        return
+                except Exception:
+                    continue
 
     # ------------------------------------------------------------------ #
     # CF challenge helpers                                                 #

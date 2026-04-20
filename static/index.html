@@ -774,7 +774,7 @@ var allRecords = [];
 
 /* ═══ THEME ═══ */
 function toggleTheme(){var h=document.documentElement,d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');document.querySelector('.theme-icon-light').style.display=d?'':'none';document.querySelector('.theme-icon-dark').style.display=d?'none':'';localStorage.setItem('cf-theme',d?'light':'dark')}
-(function(){var s=localStorage.getItem('cf-theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');document.querySelector('.theme-icon-light').style.display='none';document.querySelector('.theme-icon-dark').style.display=''}})();
+(function(){var s=localStorage.getItem('cf-theme');if(s!=='light'){document.documentElement.setAttribute('data-theme','dark');document.querySelector('.theme-icon-light').style.display='none';document.querySelector('.theme-icon-dark').style.display=''}})();
 
 /* ═══ NAV ═══ */
 document.querySelectorAll('.nav-tab').forEach(function(tab){tab.addEventListener('click',function(){document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active')});document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});tab.classList.add('active');document.getElementById('page-'+tab.dataset.page).classList.add('active');if(tab.dataset.page==='pending')loadPending();if(tab.dataset.page==='reviewed')loadReviewed();if(tab.dataset.page==='config')loadConfig();if(tab.dataset.page==='records')loadRecords();if(tab.dataset.page==='admin')loadAdmin()})});
@@ -1026,8 +1026,9 @@ function openCard(el){
     if(d.analysis){
       document.getElementById('full-empty').style.display='none';
       document.getElementById('btn-full').textContent='重新生成';
-      var bc={};if(d.lgm_source&&d.lgm_handle)bc[d.lgm_handle]={source:d.lgm_source,lang:d.lgm_lang||'',url:d.lgm_url||''};
-      applyFullReviewLayout(d.analysis,d.user_code||'',bc);
+      var bc=d.lgm_source||'';
+      var bm=d.lgm_handle?{handle:d.lgm_handle,lang:d.lgm_lang||'',url:d.lgm_url||''}:null;
+      applyFullReviewLayout(d.analysis,d.user_code||'',bc,bm);
     }
   }).catch(function(e){document.getElementById('card-name').textContent='加载失败: '+e.message});
 }
@@ -1224,10 +1225,12 @@ function runFullReview(){
       card.fullChunks.push(ev.text);
       scheduleStreamRender();
     } else if(ev.type==='done'){
-      if(streamRaf){cancelAnimationFrame(streamRaf);}
+      if(streamRaf){cancelAnimationFrame(streamRaf);streamRaf=null;}
+      streamDirty=false;
       btn.textContent='重新生成';
       var rawMd=card.fullChunks.join('');
       applyFullReviewLayout(rawMd, card.userCodeLatest, card.bossCode, card.bossMeta);
+      document.querySelectorAll('.streaming-cursor').forEach(function(el){el.classList.remove('streaming-cursor');});
     } else if(ev.type==='fail'){
       if(streamRaf){cancelAnimationFrame(streamRaf);}
       document.getElementById('full-progress').style.display='';

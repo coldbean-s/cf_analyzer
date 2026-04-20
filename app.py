@@ -36,6 +36,7 @@ app.include_router(auth_router)
 
 STATIC_DIR = Path(__file__).parent / "static"
 SHARED_CF_PROFILE = Path(__file__).parent / "data" / "cf_browser_profiles" / "shared"
+CF_COOKIES_FILE = Path(__file__).parent / "data" / "cf_cookies.json"
 CHROME_SEMAPHORE = asyncio.Semaphore(config.MAX_CHROME_INSTANCES)
 
 
@@ -248,7 +249,7 @@ async def get_config(user: db.User = Depends(require_user)):
     ds_key = crypto.decrypt(uc.deepseek_api_key_enc) if uc.deepseek_api_key_enc else ""
     return {
         "cf_handle":          uc.cf_handle or "",
-        "cf_profile_exists":  SHARED_CF_PROFILE.exists() and bool(list(SHARED_CF_PROFILE.iterdir())) if SHARED_CF_PROFILE.exists() else False,
+        "cf_profile_exists":  CF_COOKIES_FILE.exists() and CF_COOKIES_FILE.stat().st_size > 10,
         "active_llm":         uc.active_llm or "claude",
         "claude_api_key":     _mask(claude_key),
         "claude_base_url":    uc.claude_base_url or "",

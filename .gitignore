@@ -5,3 +5,5 @@ __pycache__/
 .venv/
 alembic/versions/*.py
 !alembic/versions/.gitkeep
+opus_4_7_ppt/
+.claude/

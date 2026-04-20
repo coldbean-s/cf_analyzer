@@ -9,19 +9,36 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   app:
     build: .
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "6010:6010"
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-dev}@postgres:5432/cf_analyzer
     volumes:
-      - ./data:/app/data  # Persist CF browser profiles
+      - ./data:/app/data
+      # Dev: mount source code so code changes don't need rebuild
+      - ./app.py:/app/app.py
+      - ./analyzer.py:/app/analyzer.py
+      - ./auth.py:/app/auth.py
+      - ./cf_client.py:/app/cf_client.py
+      - ./config.py:/app/config.py
+      - ./crypto.py:/app/crypto.py
+      - ./db.py:/app/db.py
+      - ./submissions.py:/app/submissions.py
+      - ./start.sh:/app/start.sh
+      - ./static:/app/static
 
 volumes:
   pgdata:

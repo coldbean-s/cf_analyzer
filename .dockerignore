@@ -1,0 +1,8 @@
+.venv/
+.git/
+.env
+__pycache__/
+*.pyc
+data/
+opus_4_7_ppt/
+.claude/
