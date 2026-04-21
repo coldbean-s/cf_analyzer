@@ -160,6 +160,21 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
 .rating-badge.cf-gray{background:rgba(128,128,128,.08)}.rating-badge.cf-green{background:rgba(0,167,74,.08)}.rating-badge.cf-cyan{background:rgba(3,168,158,.08)}.rating-badge.cf-blue{background:rgba(0,0,255,.08)}.rating-badge.cf-violet{background:rgba(170,0,170,.08)}.rating-badge.cf-orange{background:rgba(255,140,0,.08)}.rating-badge.cf-red{background:rgba(255,0,0,.08)}
 [data-theme="dark"] .rating-badge.cf-gray{background:rgba(154,154,154,.12)}[data-theme="dark"] .rating-badge.cf-green{background:rgba(46,204,113,.12)}[data-theme="dark"] .rating-badge.cf-cyan{background:rgba(26,188,156,.12)}[data-theme="dark"] .rating-badge.cf-blue{background:rgba(102,153,255,.12)}[data-theme="dark"] .rating-badge.cf-violet{background:rgba(204,119,255,.12)}[data-theme="dark"] .rating-badge.cf-orange{background:rgba(255,184,77,.12)}[data-theme="dark"] .rating-badge.cf-red{background:rgba(255,85,85,.12)}
 
+/* ── ADMIN ── */
+.admin-period-btn{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text-dim);cursor:pointer;font-family:inherit}
+.admin-period-btn:hover{border-color:var(--border-hi);color:var(--text-mid)}
+.admin-period-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.admin-log-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.admin-log-row:hover{background:var(--surface)}
+.admin-log-detail{display:none;padding:8px 12px 12px 12px;background:var(--surface);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;white-space:pre-wrap;color:var(--text-dim);max-height:400px;overflow-y:auto}
+.admin-log-detail.open{display:block}
+.log-status{font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;flex-shrink:0}
+.log-status.success{background:rgba(46,204,113,.12);color:#2ecc71}
+.log-status.error{background:rgba(255,85,85,.12);color:#ff5555}
+.log-status.running{background:rgba(255,184,77,.12);color:#ffb84d}
+.log-status.partial{background:rgba(255,165,0,.12);color:#ffa500}
+.log-type{font-size:10px;padding:2px 6px;border-radius:3px;background:var(--surface2);color:var(--text-dim);flex-shrink:0}
+
 /* ── DRAWER ── */
 .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:200;backdrop-filter:blur(2px);display:none}
 .drawer-overlay.open{display:block}
@@ -264,6 +279,12 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
 .fr-cl-n{color:#3A3A4A;min-width:28px;text-align:right;padding-right:10px;user-select:none;flex-shrink:0}
 .fr-cl-t{color:#C8C8D0;white-space:pre;flex:1}
 
+.fr-insight-section{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+.fr-insight{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
+.fr-insight-label{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.fr-insight-body{font-size:13px;line-height:1.7;color:var(--text)}
+.fr-insight-body p{margin:0 0 6px}
+.fr-insight-body blockquote{border-left:3px solid var(--accent);margin:6px 0;padding:4px 12px;color:var(--text);background:rgba(99,102,241,.06);border-radius:0 var(--radius) var(--radius) 0;font-size:13px}
 .fr-ann-divider{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px;display:flex;align-items:center;gap:10px}
 .fr-ann-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .fr-anns{display:flex;flex-direction:column;gap:8px}
@@ -546,6 +567,7 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
         <div class="cfg-card-head">
           <span class="cfg-card-title">大佬列表</span>
           <span class="cfg-card-desc">按 rating 排序</span>
+          <button class="btn" id="lgm-refresh-btn" onclick="refreshLgmProfiles()" style="box-shadow:none;font-size:11px;padding:3px 10px;margin-left:auto">刷新动态</button>
         </div>
         <div class="cfg-card-body">
           <div class="lgm-list" id="lgm-list"></div>
@@ -595,7 +617,7 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
           <div class="cfg-row">
             <span class="cfg-label">同语言匹配</span>
             <label class="cfg-toggle">
-              <input type="checkbox" id="cfg-same-lang" checked>
+              <input type="checkbox" id="cfg-same-lang" checked onchange="saveSettings()">
               <span class="cfg-toggle-track"></span>
             </label>
             <span style="font-size:11px;color:var(--text-dim)">只搜索相同语言的大佬提交</span>
@@ -649,9 +671,6 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
             <button class="btn" onclick="testLLM()" style="box-shadow:none">测试连接</button>
             <button class="btn primary" onclick="saveLLM()" style="box-shadow:none">保存</button>
           </div>
-          <div style="display:flex;gap:8px;margin-top:4px">
-            <button class="btn" onclick="saveSettings()" style="box-shadow:none;margin-right:auto">保存偏好设置</button>
-          </div>
         </div>
       </div>
 
@@ -661,7 +680,7 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
 
 <!-- ═══ ADMIN ═══ -->
 <div class="page" id="page-admin">
-  <div style="padding:24px;max-width:800px;margin:0 auto">
+  <div style="padding:24px;max-width:1000px;margin:0 auto">
     <h2 style="font-size:18px;color:var(--text-hi);margin:0 0 20px">管理面板</h2>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px" id="admin-stats">
       <div class="stat-card"><div class="stat-value" id="stat-users">-</div><div class="stat-label">总用户</div></div>
@@ -669,8 +688,27 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
       <div class="stat-card"><div class="stat-value" id="stat-analyses">-</div><div class="stat-label">总分析</div></div>
       <div class="stat-card"><div class="stat-value" id="stat-today">-</div><div class="stat-label">今日分析</div></div>
     </div>
+
+    <!-- Active Users Ranking -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <h3 style="font-size:14px;color:var(--text-mid);margin:0">活跃排行</h3>
+        <div style="display:flex;gap:4px" id="ranking-period-btns">
+          <button class="admin-period-btn" data-period="day" onclick="loadActiveUsers('day')">日</button>
+          <button class="admin-period-btn active" data-period="week" onclick="loadActiveUsers('week')">周</button>
+          <button class="admin-period-btn" data-period="month" onclick="loadActiveUsers('month')">月</button>
+        </div>
+      </div>
+      <div id="admin-ranking" style="font-size:13px"></div>
+    </div>
+
+    <!-- Recent Users -->
     <h3 style="font-size:14px;color:var(--text-mid);margin:0 0 12px">最近活跃用户</h3>
-    <div id="admin-users" style="font-size:13px"></div>
+    <div id="admin-users" style="font-size:13px;margin-bottom:28px"></div>
+
+    <!-- Analysis Logs -->
+    <h3 style="font-size:14px;color:var(--text-mid);margin:0 0 12px">分析日志</h3>
+    <div id="admin-logs" style="font-size:13px"></div>
   </div>
 </div>
 
@@ -793,13 +831,17 @@ function loadConfig(){fetch('/api/config').then(function(r){return r.json()}).th
   document.getElementById('cfg-same-lang').checked=c.same_language_only!==false;
 
   document.querySelectorAll('.cfg-radio').forEach(function(b){b.classList.toggle('active',b.textContent.toLowerCase()===c.active_llm)});
-  lgmData=(c.lgm_handles||[]).map(function(h){return{handle:h,rating:0,maxRating:0,rank:'',avatar:'',lastOnline:0,contestCount:0}});
-  renderLgm();fetchLgmProfiles();populateCompareOptions();loadCompareMode(c);
+  var profiles=c.lgm_profiles||{};
+  lgmData=(c.lgm_handles||[]).map(function(h){
+    var p=profiles[h.toLowerCase()]||{};
+    return{handle:p.handle||h,rating:p.rating||0,maxRating:p.maxRating||0,rank:p.rank||'',avatar:p.avatar||'',lastOnline:p.lastOnline||0,contestCount:p.contestCount||0}
+  });
+  renderLgm();populateCompareOptions();loadCompareMode(c);
   if(c.cf_profile_exists)document.getElementById('cf-session-status').innerHTML='<span class="cfg-status-dot ok"></span> 已建立';
 }).catch(function(){})}
 function saveCfHandle(){var h=document.getElementById('cfg-cf-handle').value.trim();if(!h)return;fetch('/api/config/cf',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({handle:h})}).then(function(){alert('已保存')}).catch(function(){alert('保存失败')})}
 function saveLLM(){var active=document.querySelector('.cfg-radio.active').textContent.toLowerCase();fetch('/api/config/active-llm',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({active_llm:active})});if(active==='claude'){fetch('/api/config/llm',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_key:document.getElementById('cfg-claude-key').value,base_url:document.getElementById('cfg-claude-url').value,model:document.getElementById('cfg-claude-model').value})})}else{fetch('/api/config/deepseek',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_key:document.getElementById('cfg-ds-key').value,model:document.getElementById('cfg-ds-model').value})})}alert('已保存')}
-function saveSettings(){fetch('/api/config/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({same_language_only:document.getElementById('cfg-same-lang').checked})}).then(function(){alert('已保存')})}
+function saveSettings(){var el=document.getElementById('cfg-same-lang');fetch('/api/config/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({same_language_only:el.checked})}).then(function(){var tip=document.createElement('span');tip.textContent=el.checked?'已开启':'已关闭';tip.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#0f0;padding:6px 16px;border-radius:6px;font-size:13px;z-index:9999;border:1px solid #0f03';document.body.appendChild(tip);setTimeout(function(){tip.remove()},1500)})}
 function switchLLM(btn){document.querySelectorAll('.cfg-radio').forEach(function(r){r.classList.remove('active')});btn.classList.add('active')}
 
 /* LGM handles */
@@ -829,7 +871,7 @@ function renderLgm(){
   }).join('');
 }
 function removeLgm(handle){lgmData=lgmData.filter(function(h){return h.handle!==handle});renderLgm();saveLgmHandles();populateCompareOptions()}
-function saveLgmHandles(){fetch('/api/config/lgm-handles',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({handles:lgmData.map(function(h){return h.handle})})})}
+function saveLgmHandles(){return fetch('/api/config/lgm-handles',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({handles:lgmData.map(function(h){return h.handle})})})}
 
 var lgmPending=null; /* pending preview data */
 function searchLgmHandle(){
@@ -843,10 +885,10 @@ function searchLgmHandle(){
   if(lgmData.some(function(h){return h.handle.toLowerCase()===val.toLowerCase()})){
     status.textContent='已在列表中';status.style.color='var(--orange)';return}
   btn.disabled=true;btn.textContent='查找中...';status.textContent='';status.style.color='';
-  /* Fetch user.info + user.rating in parallel */
+  /* Fetch user.info + user.rating in parallel (via backend proxy) */
   Promise.all([
-    fetch('https://codeforces.com/api/user.info?handles='+encodeURIComponent(val)).then(function(r){return r.json()}),
-    fetch('https://codeforces.com/api/user.rating?handle='+encodeURIComponent(val)).then(function(r){return r.json()}).catch(function(){return{status:'OK',result:[]}})
+    fetch('/api/cf-proxy/user.info?handles='+encodeURIComponent(val)).then(function(r){return r.json()}),
+    fetch('/api/cf-proxy/user.rating?handle='+encodeURIComponent(val)).then(function(r){return r.json()}).catch(function(){return{status:'OK',result:[]}})
   ]).then(function(results){
     btn.disabled=false;btn.textContent='查找';
     var info=results[0],rating=results[1];
@@ -884,38 +926,28 @@ function confirmAddLgm(){
   document.getElementById('lgm-add-input').value='';
   document.getElementById('lgm-preview').style.display='none';
   document.getElementById('lgm-search-status').textContent='';
-  renderLgm();saveLgmHandles();
+  renderLgm();saveLgmHandles().then(function(){refreshLgmProfiles()});
 }
 function cancelLgmPreview(){
   lgmPending=null;
   document.getElementById('lgm-preview').style.display='none';
   document.getElementById('lgm-search-status').textContent='';
 }
-function fetchLgmProfiles(){
-  var handles=lgmData.map(function(h){return h.handle}).join(';');
-  if(!handles){renderLgm();return}
-  Promise.all([
-    fetch('https://codeforces.com/api/user.info?handles='+handles).then(function(r){return r.json()}).catch(function(){return{status:'FAILED'}}),
-    /* batch rating calls — CF doesn't support batch for user.rating, so we fetch individually */
-  ]).then(function(results){
-    var info=results[0];
-    if(info.status==='OK')info.result.forEach(function(u){
-      var m=lgmData.find(function(h){return h.handle.toLowerCase()===u.handle.toLowerCase()});
-      if(!m)return;
-      m.rating=u.rating||0;m.maxRating=u.maxRating||0;m.rank=u.rank||'';
-      m.lastOnline=u.lastOnlineTimeSeconds||0;
-      var av=u.titlePhoto||'';if(av.startsWith('/'))av='https:'+av;
-      m.avatar=av;
+function refreshLgmProfiles(){
+  var btn=document.getElementById('lgm-refresh-btn');
+  btn.disabled=true;btn.textContent='刷新中...';
+  fetch('/api/config/lgm-refresh',{method:'POST'}).then(function(r){return r.json()}).then(function(d){
+    btn.disabled=false;btn.textContent='刷新动态';
+    if(!d.ok)return;
+    var profiles=d.profiles||{};
+    lgmData=lgmData.map(function(h){
+      var key=h.handle.toLowerCase();
+      var p=profiles[key];
+      if(!p)return h;
+      return{handle:p.handle||h.handle,rating:p.rating||0,maxRating:p.maxRating||0,rank:p.rank||'',avatar:p.avatar||'',lastOnline:p.lastOnline||0,contestCount:p.contestCount||0};
     });
-    renderLgm();
-    /* Fetch contest counts individually (non-blocking) */
-    lgmData.forEach(function(h){
-      fetch('https://codeforces.com/api/user.rating?handle='+encodeURIComponent(h.handle))
-        .then(function(r){return r.json()})
-        .then(function(d){if(d.status==='OK'){h.contestCount=d.result.length;renderLgm()}})
-        .catch(function(){});
-    });
-  });
+    renderLgm();populateCompareOptions();
+  }).catch(function(){btn.disabled=false;btn.textContent='刷新动态'});
 }
 document.getElementById('lgm-add-input').addEventListener('keydown',function(e){if(e.key==='Enter')searchLgmHandle()});
 
@@ -975,8 +1007,8 @@ function refreshSubmissions(){var prog=document.getElementById('pending-sync-pro
 /* ═══ PENDING ═══ */
 function loadPending(){fetch('/api/submissions/status').then(function(r){return r.json()}).then(function(s){document.getElementById('cold-banner').style.display=s.cold_start_done?'none':''}).catch(function(){});var rmin=document.getElementById('pending-rmin').value,rmax=document.getElementById('pending-rmax').value;var params=new URLSearchParams();if(rmin)params.set('rating_min',rmin);if(rmax)params.set('rating_max',rmax);fetch('/api/problems/pending?'+params).then(function(r){return r.json()}).then(function(data){renderPending(data)}).catch(function(e){document.getElementById('list-ac').innerHTML='<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">'+e.message+'</div>'});fetch('/api/problems/reviewed').then(function(r){return r.json()}).then(function(rows){document.getElementById('stat-reviewed').textContent=rows.length}).catch(function(){})}
 function renderPending(data){var ac=data.ac_unreviewed||[],fail=data.failed||[];document.getElementById('count-ac').textContent=ac.length;document.getElementById('count-fail').textContent=fail.length;document.getElementById('stat-ac').textContent=ac.length;document.getElementById('stat-fail').textContent=fail.length;
-document.getElementById('list-ac').innerHTML=ac.length?ac.map(function(p){return'<div class="prob-row" onclick="openCard(this)" data-contest="'+p.contest_id+'" data-index="'+p.problem_index+'" data-name="'+(p.problem_name||'')+'" data-rating="'+(p.rating||'')+'" data-lang="'+(p.language||'')+'"><span class="prob-verdict ac">AC</span><span class="prob-id">'+p.contest_id+p.problem_index+'</span><span class="prob-name">'+(p.problem_name||'')+'</span>'+(p.rating?'<span class="prob-rating">'+p.rating+'</span>':'')+'<span class="prob-lang">'+(p.language||'')+'</span>'+(p.style_review?'<span class="prob-tag style">已点评</span>':'')+'</div>'}).join(''):'<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">暂无</div>';
-document.getElementById('list-fail').innerHTML=fail.length?fail.map(function(p){return'<div class="prob-row" onclick="openCard(this)" data-contest="'+p.contest_id+'" data-index="'+p.problem_index+'" data-name="'+(p.problem_name||'')+'" data-rating="'+(p.rating||'')+'" data-lang="'+(p.language||'')+'"><span class="prob-verdict wa">WA</span><span class="prob-id">'+p.contest_id+p.problem_index+'</span><span class="prob-name">'+(p.problem_name||'')+'</span>'+(p.rating?'<span class="prob-rating">'+p.rating+'</span>':'')+'<span class="prob-tag attempts">'+(p.attempt_count||'')+'次</span></div>'}).join(''):'<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">暂无</div>'}
+document.getElementById('list-ac').innerHTML=ac.length?ac.map(function(p){var rc=cfRatingClass(p.rating||0);return'<div class="prob-row" onclick="openCard(this)" data-contest="'+p.contest_id+'" data-index="'+p.problem_index+'" data-name="'+(p.problem_name||'')+'" data-rating="'+(p.rating||'')+'" data-lang="'+(p.language||'')+'"><span class="prob-verdict ac">AC</span><span class="prob-id '+rc+'">'+p.contest_id+p.problem_index+'</span><span class="prob-name">'+(p.problem_name||'')+'</span>'+(p.rating?'<span class="rating-badge '+rc+'">'+p.rating+'</span>':'')+'<span class="prob-lang">'+(p.language||'')+'</span>'+(p.style_review?'<span class="prob-tag style">已点评</span>':'')+'</div>'}).join(''):'<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">暂无</div>';
+document.getElementById('list-fail').innerHTML=fail.length?fail.map(function(p){var rc=cfRatingClass(p.rating||0);return'<div class="prob-row" onclick="openCard(this)" data-contest="'+p.contest_id+'" data-index="'+p.problem_index+'" data-name="'+(p.problem_name||'')+'" data-rating="'+(p.rating||'')+'" data-lang="'+(p.language||'')+'"><span class="prob-verdict wa">WA</span><span class="prob-id '+rc+'">'+p.contest_id+p.problem_index+'</span><span class="prob-name">'+(p.problem_name||'')+'</span>'+(p.rating?'<span class="rating-badge '+rc+'">'+p.rating+'</span>':'')+'<span class="prob-tag attempts">'+(p.attempt_count||'')+'次</span></div>'}).join(''):'<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">暂无</div>'}
 
 /* ═══ REVIEWED ═══ */
 function cfRatingClass(r){if(r>=2400)return'cf-red';if(r>=2100)return'cf-orange';if(r>=1900)return'cf-violet';if(r>=1600)return'cf-blue';if(r>=1400)return'cf-cyan';if(r>=1200)return'cf-green';return'cf-gray'}
@@ -1043,29 +1075,30 @@ function scheduleStmtSave(){clearTimeout(card.stmtTimer);card.stmtTimer=setTimeo
 
 /* ═══ FULL REVIEW: PARSER + RENDERER ═══ */
 function parseFullReview(md) {
-  var result = {summary: null, findings: []};
-  /* --- Extract ## 总结 section --- */
+  var result = {summary: null, findings: [], essence: '', keyObs: ''};
+  /* --- Extract ## 题意提炼 --- */
+  var essMatch = md.match(/##\s*题意提炼\s*\r?\n([\s\S]*?)(?=\r?\n## |$)/);
+  if (essMatch) result.essence = essMatch[1].trim();
+  /* --- Extract ## 关键观察 --- */
+  var obsMatch = md.match(/##\s*关键观察\s*\r?\n([\s\S]*?)(?=\r?\n## |$)/);
+  if (obsMatch) result.keyObs = obsMatch[1].trim();
+  /* --- Extract ## 总结 section (new format) --- */
   var sumMatch = md.match(/##\s*总结\s*\r?\n([\s\S]*?)(?=\r?\n## |$)/);
   if (sumMatch) {
     var block = sumMatch[1];
-    var algo = (block.match(/-\s*算法差异[：:]\s*(.+)/) || [])[1] || '';
-    var ratio = (block.match(/-\s*代码量对比[：:]\s*(.+)/) || [])[1] || '';
-    var gap = (block.match(/-\s*关键差距[：:]\s*(.+)/) || [])[1] || '';
+    var approach = (block.match(/-\s*思路对比[：:]\s*([\s\S]*?)(?=\n-|\n##|$)/) || [])[1] || '';
+    var complexity = (block.match(/-\s*复杂度[：:]\s*(.+)/) || [])[1] || '';
     var verdict = (block.match(/-\s*一句话[：:]\s*([\s\S]*?)(?=\n-|\n##|$)/) || [])[1] || '';
-    /* parse algo: "同 · 都用了KMP" -> value + unit */
-    var algoParts = algo.split(/\s*·\s*/);
-    var ratioParts = ratio.split(/\s*·\s*/);
-    var gapParts = gap.split(/\s*·\s*/);
-    /* determine color for algo value */
-    var algoVal = (algoParts[0] || '').trim();
-    var algoColor = /同|相同|一致/.test(algoVal) ? 'green' : 'red';
-    /* extract number from ratio for color */
-    var ratioNum = parseFloat(ratioParts[0]) || 0;
-    var ratioColor = ratioNum <= 1.2 ? 'green' : ratioNum <= 2 ? 'orange' : 'red';
+    /* fallback: also try old format fields */
+    if (!approach) approach = (block.match(/-\s*算法差异[：:]\s*(.+)/) || [])[1] || '';
+    if (!complexity) {
+      var ratio = (block.match(/-\s*代码量对比[：:]\s*(.+)/) || [])[1] || '';
+      var gap = (block.match(/-\s*关键差距[：:]\s*(.+)/) || [])[1] || '';
+      if (ratio || gap) complexity = [ratio, gap].filter(Boolean).join(' · ');
+    }
     result.summary = {
-      algoVal: algoVal, algoUnit: (algoParts[1] || '').trim(), algoColor: algoColor,
-      ratioVal: (ratioParts[0] || '').trim(), ratioUnit: (ratioParts[1] || '').trim(), ratioColor: ratioColor,
-      gapVal: (gapParts[0] || '').trim(), gapUnit: (gapParts[1] || '').trim(),
+      approach: approach.trim(),
+      complexity: complexity.trim(),
       verdict: verdict.trim()
     };
   }
@@ -1122,6 +1155,20 @@ function renderFullReview(parsed, userCode, bossCode, bossMeta) {
     html += '</div>';
   }
 
+  /* --- Essence + Key observations --- */
+  if (parsed.essence || parsed.keyObs) {
+    html += '<div class="fr-insight-section">';
+    if (parsed.essence) {
+      html += '<div class="fr-insight"><div class="fr-insight-label">题意提炼</div>';
+      html += '<div class="fr-insight-body">' + marked.parse(parsed.essence) + '</div></div>';
+    }
+    if (parsed.keyObs) {
+      html += '<div class="fr-insight"><div class="fr-insight-label">关键观察</div>';
+      html += '<div class="fr-insight-body">' + marked.parse(parsed.keyObs) + '</div></div>';
+    }
+    html += '</div>';
+  }
+
   /* --- Annotation cards --- */
   if (parsed.findings.length > 0) {
     var sevLabel = {critical: '关键差距', warn: '可优化', good: '值得学习'};
@@ -1153,9 +1200,8 @@ function renderFullSummaryPopover(parsed) {
   if (!s) { document.getElementById('btn-summary').style.display = 'none'; return; }
   document.getElementById('btn-summary').style.display = '';
   var h = '<div class="fr-metrics">';
-  h += '<div class="fr-m"><div class="fr-m-label">算法差异</div><div class="fr-m-row"><span class="fr-m-val ' + s.algoColor + '">' + escHtml(s.algoVal) + '</span><span class="fr-m-unit">' + escHtml(s.algoUnit) + '</span></div></div>';
-  h += '<div class="fr-m"><div class="fr-m-label">代码量对比</div><div class="fr-m-row"><span class="fr-m-val ' + s.ratioColor + '">' + escHtml(s.ratioVal) + '</span><span class="fr-m-unit">' + escHtml(s.ratioUnit) + '</span></div></div>';
-  h += '<div class="fr-m"><div class="fr-m-label">关键差距</div><div class="fr-m-row"><span class="fr-m-val red">' + escHtml(s.gapVal) + '</span><span class="fr-m-unit">' + escHtml(s.gapUnit) + '</span></div></div>';
+  h += '<div class="fr-m"><div class="fr-m-label">思路对比</div><div class="fr-m-row"><span class="fr-m-unit">' + marked.parseInline(s.approach || '') + '</span></div></div>';
+  if (s.complexity) h += '<div class="fr-m"><div class="fr-m-label">复杂度</div><div class="fr-m-row"><span class="fr-m-val">' + escHtml(s.complexity) + '</span></div></div>';
   h += '</div>';
   h += '<div class="fr-verdict">' + marked.parse(s.verdict) + '</div>';
   document.getElementById('fr-pop-body').innerHTML = h;
@@ -1218,6 +1264,9 @@ function runFullReview(){
       card.bossCode=ev.source||'';
       card.bossMeta={handle:ev.handle||'',lang:ev.lang||'',sid:ev.sid,url:ev.url||''};
       scheduleStreamRender();
+    } else if(ev.type==='problem_statement'){
+      document.getElementById('card-statement').value=ev.text;
+      scheduleStmtSave();
     } else if(ev.type==='analysis_start'){
       document.getElementById('full-progress').style.display='none';
       scheduleStreamRender();
@@ -1291,6 +1340,54 @@ function loadAdmin(){
     });
     html+='</table>';
     document.getElementById('admin-users').innerHTML=html;
+  }).catch(function(){});
+  loadActiveUsers('week');
+  loadAnalysisLogs();
+}
+
+function loadActiveUsers(period){
+  document.querySelectorAll('.admin-period-btn').forEach(function(b){b.classList.toggle('active',b.dataset.period===period)});
+  fetch('/api/admin/active-users?period='+period+'&limit=50').then(function(r){return r.json()}).then(function(rows){
+    var el=document.getElementById('admin-ranking');
+    if(!rows.length){el.innerHTML='<div style="padding:12px;color:var(--text-dim)">暂无数据</div>';return}
+    var html='<table style="width:100%;border-collapse:collapse"><tr style="color:var(--text-dim);font-size:11px;text-align:left"><th style="padding:6px;width:40px">#</th><th style="padding:6px">用户</th><th style="padding:6px;text-align:right">报告数</th><th style="padding:6px;text-align:right">最后活跃</th></tr>';
+    rows.forEach(function(u,i){
+      var t=u.last_active?new Date(u.last_active).toLocaleDateString('zh-CN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+      html+='<tr style="border-top:1px solid var(--border)"><td style="padding:6px;color:var(--text-dim);font-weight:600">'+(i+1)+'</td><td style="padding:6px;display:flex;align-items:center;gap:6px"><img src="'+(u.github_avatar_url||'')+'" style="width:20px;height:20px;border-radius:50%">'+u.github_login+'</td><td style="padding:6px;text-align:right;font-family:\'JetBrains Mono\',monospace;font-weight:600;color:var(--accent)">'+u.report_count+'</td><td style="padding:6px;text-align:right;color:var(--text-dim)">'+t+'</td></tr>';
+    });
+    html+='</table>';
+    el.innerHTML=html;
+  }).catch(function(){});
+}
+
+function loadAnalysisLogs(){
+  fetch('/api/admin/analysis-logs?limit=100').then(function(r){return r.json()}).then(function(rows){
+    var el=document.getElementById('admin-logs');
+    if(!rows.length){el.innerHTML='<div style="padding:12px;color:var(--text-dim)">暂无日志</div>';return}
+    var html='<div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">';
+    rows.forEach(function(log,i){
+      var ts=log.started_at?new Date(log.started_at).toLocaleString('zh-CN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';
+      var dur=log.duration_ms!=null?(log.duration_ms>=1000?(log.duration_ms/1000).toFixed(1)+'s':log.duration_ms+'ms'):'—';
+      var typeLabel={'analyze':'分析','style_review':'点评','full_review':'对比'}[log.log_type]||log.log_type;
+      var prob=log.contest_id?(log.contest_id+(log.problem_index||'')):'—';
+      var stepsJson=JSON.stringify(log.steps_detail||{},null,2);
+      var debugLog=log.ai_debug_log||'';
+      var errMsg=log.error_message?'\n[ERROR] '+log.error_message:'';
+      var detail=stepsJson+'\n\n'+debugLog+errMsg;
+      html+='<div class="admin-log-row" onclick="this.nextElementSibling.classList.toggle(\'open\')">'
+        +'<img src="'+(log.github_avatar_url||'')+'" style="width:18px;height:18px;border-radius:50%;flex-shrink:0">'
+        +'<span style="min-width:70px;color:var(--text-mid)">'+log.github_login+'</span>'
+        +'<span class="log-type">'+typeLabel+'</span>'
+        +'<span style="font-family:\'JetBrains Mono\',monospace;min-width:60px">'+prob+'</span>'
+        +'<span class="log-status '+log.status+'">'+log.status+'</span>'
+        +'<span style="flex:1"></span>'
+        +'<span style="color:var(--text-dim);min-width:50px;text-align:right;font-family:\'JetBrains Mono\',monospace">'+dur+'</span>'
+        +'<span style="color:var(--text-dim);min-width:100px;text-align:right">'+ts+'</span>'
+        +'</div>'
+        +'<div class="admin-log-detail">'+detail.replace(/</g,'&lt;')+'</div>';
+    });
+    html+='</div>';
+    el.innerHTML=html;
   }).catch(function(){});
 }
 

@@ -67,6 +67,7 @@ class UserConfig(Base):
     same_language_only = Column(Boolean, default=True)
     request_delay = Column(Float, default=2.0)
     lgm_handles = Column(JSONB, default=list)
+    lgm_profiles = Column(JSONB, default=dict)
     compare_mode = Column(String, default="auto")
     compare_target = Column(String, default="")
     compare_targets = Column(JSONB, default=list)
@@ -131,6 +132,31 @@ class SyncState(Base):
     last_submission_id = Column(Integer, default=0)
     last_sync_at = Column(String)
     cold_start_done = Column(Integer, default=0)
+
+
+class AnalysisLog(Base):
+    __tablename__ = "analysis_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    github_login = Column(String, default="")
+    log_type = Column(String, nullable=False)
+    contest_id = Column(Integer)
+    problem_index = Column(String, default="")
+    status = Column(String, nullable=False, default="running")
+    started_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+    duration_ms = Column(Integer, nullable=True)
+    model_used = Column(String, default="")
+    steps_detail = Column(JSONB, default=dict)
+    result_summary = Column(String, default="")
+    ai_debug_log = Column(Text, default="")
+    error_message = Column(String, default="")
+
+    __table_args__ = (
+        Index("ix_analysis_logs_user_id", "user_id"),
+        Index("ix_analysis_logs_started_at", "started_at"),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -627,6 +653,71 @@ async def get_recent_users(limit: int = 20) -> list[dict]:
                 User.created_at, User.last_login_at,
             )
             .order_by(User.last_login_at.desc())
+            .limit(limit)
+        )).all()
+        return [r._asdict() for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# Analysis logs
+# ---------------------------------------------------------------------------
+
+async def create_analysis_log(data: dict) -> int:
+    async with async_session() as s:
+        row = AnalysisLog(**data)
+        s.add(row)
+        await s.commit()
+        await s.refresh(row)
+        return row.id
+
+
+async def update_analysis_log(log_id: int, **kwargs) -> None:
+    async with async_session() as s:
+        await s.execute(
+            update(AnalysisLog).where(AnalysisLog.id == log_id).values(**kwargs)
+        )
+        await s.commit()
+
+
+async def list_analysis_logs(limit: int = 50, offset: int = 0) -> list[dict]:
+    async with async_session() as s:
+        rows = (await s.execute(
+            select(
+                AnalysisLog.id, AnalysisLog.user_id, AnalysisLog.github_login,
+                AnalysisLog.log_type, AnalysisLog.contest_id, AnalysisLog.problem_index,
+                AnalysisLog.status, AnalysisLog.started_at, AnalysisLog.finished_at,
+                AnalysisLog.duration_ms, AnalysisLog.model_used,
+                AnalysisLog.steps_detail, AnalysisLog.result_summary,
+                AnalysisLog.ai_debug_log, AnalysisLog.error_message,
+                User.github_avatar_url,
+            )
+            .outerjoin(User, User.id == AnalysisLog.user_id)
+            .order_by(AnalysisLog.started_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )).all()
+        return [r._asdict() for r in rows]
+
+
+async def get_active_users_ranking(period: str = "week", limit: int = 50) -> list[dict]:
+    days = {"day": 1, "week": 7, "month": 30}.get(period, 7)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    async with async_session() as s:
+        rows = (await s.execute(
+            select(
+                AnalysisLog.user_id,
+                AnalysisLog.github_login,
+                User.github_avatar_url,
+                func.count(AnalysisLog.id).label("report_count"),
+                func.max(AnalysisLog.started_at).label("last_active"),
+            )
+            .outerjoin(User, User.id == AnalysisLog.user_id)
+            .where(
+                AnalysisLog.started_at >= cutoff,
+                AnalysisLog.status.in_(["success", "partial"]),
+            )
+            .group_by(AnalysisLog.user_id, AnalysisLog.github_login, User.github_avatar_url)
+            .order_by(func.count(AnalysisLog.id).desc())
             .limit(limit)
         )).all()
         return [r._asdict() for r in rows]

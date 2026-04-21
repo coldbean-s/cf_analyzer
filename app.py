@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.responses import StreamingResponse, FileResponse
@@ -19,6 +20,9 @@ import config
 import crypto
 import db
 from auth import router as auth_router, require_user, require_admin, get_optional_user
+
+_CF_API = "https://codeforces.com/api"
+_CF_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -258,6 +262,7 @@ async def get_config(user: db.User = Depends(require_user)):
         "deepseek_model":     uc.deepseek_model or "deepseek-chat",
         "same_language_only": uc.same_language_only if uc.same_language_only is not None else True,
         "lgm_handles":        uc.lgm_handles or [],
+        "lgm_profiles":       uc.lgm_profiles or {},
         "compare_mode":       uc.compare_mode or "auto",
         "compare_target":     uc.compare_target or "",
         "compare_targets":    uc.compare_targets or [],
@@ -347,6 +352,58 @@ async def save_lgm_handles(body: LGMHandlesBody, user: db.User = Depends(require
     handles = [h.strip() for h in body.handles if h.strip()]
     await db.update_user_config(user.id, lgm_handles=handles)
     return {"ok": True, "count": len(handles)}
+
+
+@app.post("/api/config/lgm-refresh")
+async def refresh_lgm_profiles(user: db.User = Depends(require_user)):
+    """Fetch latest CF profiles for all lgm_handles and cache in DB."""
+    uc = await db.get_user_config(user.id)
+    handles = uc.lgm_handles or []
+    if not handles:
+        return {"ok": True, "profiles": {}}
+
+    profiles: dict = dict(uc.lgm_profiles or {})
+    handles_str = ";".join(handles)
+
+    async with httpx.AsyncClient(timeout=15, headers=_CF_HEADERS) as c:
+        try:
+            r = await c.get(f"{_CF_API}/user.info", params={"handles": handles_str})
+            info = r.json()
+        except Exception:
+            info = {"status": "FAILED"}
+
+        if info.get("status") == "OK":
+            for u in info.get("result", []):
+                h = u.get("handle", "")
+                av = u.get("titlePhoto", "")
+                if av.startswith("/"):
+                    av = "https:" + av
+                profiles[h.lower()] = {
+                    "handle": h,
+                    "rating": u.get("rating", 0),
+                    "maxRating": u.get("maxRating", 0),
+                    "rank": u.get("rank", ""),
+                    "avatar": av,
+                    "lastOnline": u.get("lastOnlineTimeSeconds", 0),
+                }
+
+        for h in handles:
+            try:
+                r2 = await c.get(f"{_CF_API}/user.rating", params={"handle": h})
+                rd = r2.json()
+                if rd.get("status") == "OK":
+                    key = h.lower()
+                    if key in profiles:
+                        profiles[key]["contestCount"] = len(rd.get("result", []))
+            except Exception:
+                pass
+
+    removed = {k for k in profiles if k not in {h.lower() for h in handles}}
+    for k in removed:
+        del profiles[k]
+
+    await db.update_user_config(user.id, lgm_profiles=profiles)
+    return {"ok": True, "profiles": profiles}
 
 
 class CompareModeBody(BaseModel):
@@ -755,15 +812,23 @@ async def style_review_sse(contest_id: int, index: str, user: db.User = Depends(
     index = index.upper()
     cfg = await build_user_cfg(user.id)
     uid = user.id
+    github_login = user.github_login
     uc = await db.get_user_config(user.id)
     handle = uc.cf_handle or ""
 
     def gen():
+        from analyzer import AnalysisLogger, LLMClient
+        alog = AnalysisLogger(uid, github_login, "style_review",
+                              contest_id=contest_id, problem_index=index)
+        active_llm = cfg.get("settings", {}).get("active_llm", "claude")
         try:
             analysis = _sync_db(db.get_analysis_by_problem(handle, contest_id, index, user_id=uid))
             if not analysis:
+                alog.step("get_analysis", "error", "no card")
+                alog.finish("error", error="请先打开卡片")
                 yield {"type": "fail", "text": "请先打开卡片"}
                 return
+            alog.step("get_analysis", "ok")
 
             aid = analysis["id"]
             user_code = analysis.get("user_code", "")
@@ -787,11 +852,16 @@ async def style_review_sse(contest_id: int, index: str, user: db.User = Depends(
                 if user_code:
                     _sync_db(db.update_user_code(aid, user_code, user_id=uid))
                     yield {"type": "code_fetched", "user_code": user_code}
+                    alog.step("fetch_code", "ok")
                 else:
+                    alog.step("fetch_code", "error", "empty source")
+                    alog.finish("error", error="无法获取提交源码")
                     yield {"type": "fail", "text": "无法获取提交源码，请检查 CF 会话"}
                     return
 
             if not user_code:
+                alog.step("fetch_code", "error", "no user code")
+                alog.finish("error", error="未能获取用户代码")
                 yield {"type": "fail", "text": "未能获取用户代码"}
                 return
 
@@ -807,11 +877,11 @@ async def style_review_sse(contest_id: int, index: str, user: db.User = Depends(
                 lang_id=lang_id,
                 user_code=user_code,
             )
+            alog.step("build_prompt", "ok")
 
             yield {"type": "step", "text": "AI 正在点评代码…"}
             yield {"type": "analysis_start"}
 
-            from analyzer import LLMClient
             llm = LLMClient(cfg)
             chunks: list[str] = []
             for text in llm.stream(prompt, max_tokens=3000):
@@ -820,12 +890,22 @@ async def style_review_sse(contest_id: int, index: str, user: db.User = Depends(
 
             full = "".join(chunks)
             _sync_db(db.update_style_review(aid, full, user_id=uid))
+            alog.step("llm_call", "ok", f"{len(chunks)} chunks")
+            alog.finish("success", model=active_llm,
+                        summary=f"style review {contest_id}{index}, {len(full)} chars")
             yield {"type": "done", "aid": aid}
 
         except Exception as e:
             import traceback
-            yield {"type": "fail", "text": str(e)}
-            yield {"type": "step", "text": traceback.format_exc()[:400]}
+            alog.step("exception", "error", str(e))
+            alog.finish("error", model=active_llm, error=str(e))
+            tb = traceback.format_exc()
+            is_browser_err = any(k in tb for k in ("page.goto", "playwright", "Cloudflare", "TimeoutError", "net::ERR_"))
+            if is_browser_err:
+                yield {"type": "fail", "text": "浏览器访问 CF 超时（偶发），如果之前生成过报告，可到「已完成」查看完整报告"}
+            else:
+                yield {"type": "fail", "text": str(e)}
+            yield {"type": "step", "text": tb[:400]}
 
     return _sse_thread(gen)
 
@@ -846,24 +926,49 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
 
     cfg = await build_user_cfg(user.id)
     uid = user.id
+    github_login = user.github_login
     uc = await db.get_user_config(user.id)
     handle = uc.cf_handle or ""
     settings = cfg["settings"]
     lgm_handles: list[str] = cfg["lgm_handles"]
 
     def gen():
+        from analyzer import ANALYSIS_PROMPT, COMPREHENSIVE_PROMPT, _lang, _meta, _src, LLMClient, AnalysisLogger
+        alog = AnalysisLogger(uid, github_login, "full_review",
+                              contest_id=contest_id, problem_index=index)
+        active_llm = settings.get("active_llm", "claude")
         try:
             if not lgm_handles:
+                alog.step("check_handles", "error", "empty")
+                alog.finish("error", error="未配置大佬 handle")
                 yield {"type": "fail", "text": "未配置大佬 handle，请在设置页添加"}
                 return
 
             analysis = _sync_db(db.get_analysis_by_problem(handle, contest_id, index, user_id=uid))
             if not analysis:
+                alog.step("get_analysis", "error", "no card")
+                alog.finish("error", error="请先打开卡片")
                 yield {"type": "fail", "text": "请先打开卡片"}
                 return
+            alog.step("get_analysis", "ok")
 
             aid = analysis["id"]
             user_code = analysis.get("user_code", "")
+
+            ps = (analysis.get("problem_statement") or "").strip()
+            if not ps:
+                from analyzer import fetch_luogu_statement
+                yield {"type": "step", "text": "从洛谷获取题面…"}
+                luogu = fetch_luogu_statement(contest_id, index)
+                if luogu:
+                    ps = luogu["text"]
+                    _sync_db(db.update_problem_statement(aid, ps, user_id=uid))
+                    yield {"type": "problem_statement", "text": ps}
+                    yield {"type": "step", "text": f"题面获取成功：{luogu['title']}"}
+                    alog.step("fetch_luogu", "ok", f"{len(ps)} chars")
+                else:
+                    yield {"type": "step", "text": "洛谷暂未收录此题（可能题目过新），跳过题面获取"}
+                    alog.step("fetch_luogu", "skip", "not found")
 
             from cf_client import CFClient
             delay = float(settings.get("request_delay", 1.5))
@@ -879,6 +984,7 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
                 )
                 client._wait_cf_challenge(page, timeout=90.0)
                 yield {"type": "step", "text": "Cloudflare 验证通过 ✓"}
+                alog.step("cf_challenge", "ok")
 
                 if not user_code and analysis.get("user_submission_id"):
                     sid = analysis["user_submission_id"]
@@ -887,8 +993,11 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
                     if user_code:
                         _sync_db(db.update_user_code(aid, user_code, user_id=uid))
                         yield {"type": "code_fetched", "user_code": user_code}
+                        alog.step("fetch_user_code", "ok")
 
                 if not user_code:
+                    alog.step("fetch_user_code", "error", "empty")
+                    alog.finish("error", error="未能获取用户代码")
                     yield {"type": "fail", "text": "未能获取用户代码"}
                     return
 
@@ -901,12 +1010,16 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
                 if compare_mode == "target":
                     target_handle = settings.get("compare_target", "")
                     if not target_handle:
+                        alog.step("find_lgm", "error", "no target handle configured")
+                        alog.finish("error", error="未配置指定对手")
                         yield {"type": "fail", "text": "未配置指定对手"}
                         return
                     search_handles = [target_handle]
                 elif compare_mode == "comprehensive":
                     search_handles = settings.get("compare_targets", [])
                     if len(search_handles) < 2:
+                        alog.step("find_lgm", "error", "need >= 2 targets")
+                        alog.finish("error", error="综合对比至少需要选择 2 人")
                         yield {"type": "fail", "text": "综合对比至少需要选择 2 人"}
                         return
                 else:
@@ -931,12 +1044,17 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
                         boss_list.append({"handle": bhandle, "src": bsrc, "lang": blang, "url": burl, "sid": bsid, "contest_id": bcid})
                         yield {"type": "code_data", "role": "lgm", "source": bsrc, "url": burl, "lang": blang, "sid": bsid, "handle": bhandle}
                     if not boss_list:
+                        alog.step("find_lgm", "error", "no boss found (comprehensive)")
+                        alog.finish("error", error="所选大佬中无人解答此题")
                         yield {"type": "fail", "text": "所选大佬中无人解答此题（或语言不符）"}
                         return
+                    alog.step("find_lgm", "ok", f"{len(boss_list)} bosses found")
                 else:
                     yield {"type": "step", "text": f"寻找大佬代码（{', '.join(search_handles[:3])}…）"}
                     sub = client.find_handle_submission(contest_id, index, search_handles, lang_filter, problem_name=prob_name)
                     if not sub:
+                        alog.step("find_lgm", "error", "no AC submission found")
+                        alog.finish("error", error="大佬列表中无人解答此题")
                         yield {"type": "fail", "text": "大佬列表中无人解答此题（或语言不符）"}
                         return
                     bsid = sub["id"]
@@ -948,6 +1066,9 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
                     burl = f"https://codeforces.com/contest/{bcid}/submission/{bsid}"
                     boss_list.append({"handle": bhandle, "src": bsrc, "lang": blang, "url": burl, "sid": bsid, "contest_id": bcid})
                     yield {"type": "code_data", "role": "lgm", "source": bsrc, "url": burl, "lang": blang, "sid": bsid, "handle": bhandle}
+                    alog.step("find_lgm", "ok", f"{bhandle} #{bsid}")
+
+                alog.step("fetch_lgm_source", "ok", f"{len(boss_list)} sources")
 
             finally:
                 client.close()
@@ -955,11 +1076,10 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
             b0 = boss_list[0]
             _sync_db(db.update_lgm_info(aid, b0["src"], b0["url"], b0["lang"], b0["sid"], b0["handle"], user_id=uid))
 
-            from analyzer import ANALYSIS_PROMPT, COMPREHENSIVE_PROMPT, _lang, _meta, _src, LLMClient
+            ps_section = f"\n## 题面\n{ps}\n" if ps else ""
 
             user_lang = analysis.get("user_lang") or "C++"
             lang_id = user_lang.lower().split()[0]
-            active_llm = settings.get("active_llm", "claude")
 
             if compare_mode == "comprehensive" and len(boss_list) > 1:
                 boss_sections = ""
@@ -970,6 +1090,7 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
                     boss_sections += f"```{bl}\n{b['src']}\n```\n\n"
                 prompt = COMPREHENSIVE_PROMPT.format(
                     contest_id=contest_id, problem_index=index,
+                    problem_statement_section=ps_section,
                     boss_sections=boss_sections, user_lang=user_lang,
                     user_lang_id=lang_id, user_code=user_code,
                 )
@@ -981,6 +1102,7 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
                 }
                 prompt = ANALYSIS_PROMPT.format(
                     contest_id=contest_id, problem_index=index,
+                    problem_statement_section=ps_section,
                     boss_handle=b0["handle"], boss_meta=_meta(boss_info),
                     boss_lang=_lang(boss_info), boss_src=_src(boss_info),
                     user_lang=user_lang, user_lang_id=lang_id, user_code=user_code,
@@ -998,12 +1120,23 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
 
             full = "".join(chunks)
             _sync_db(db.update_analysis_text(aid, full, user_id=uid))
+            alog.step("llm_call", "ok", f"{len(chunks)} chunks")
+            handles_str = ", ".join(b["handle"] for b in boss_list)
+            alog.finish("success", model=active_llm,
+                        summary=f"full review {contest_id}{index} vs [{handles_str}], {len(full)} chars")
             yield {"type": "done", "aid": aid, "problem": f"{contest_id}{index}"}
 
         except Exception as e:
             import traceback
-            yield {"type": "fail", "text": str(e)}
-            yield {"type": "step", "text": traceback.format_exc()[:400]}
+            alog.step("exception", "error", str(e))
+            alog.finish("error", model=active_llm, error=str(e))
+            tb = traceback.format_exc()
+            is_browser_err = any(k in tb for k in ("page.goto", "playwright", "Cloudflare", "TimeoutError", "net::ERR_"))
+            if is_browser_err:
+                yield {"type": "fail", "text": "浏览器访问 CF 超时（偶发），如果之前生成过报告，可到「已完成」查看完整报告"}
+            else:
+                yield {"type": "fail", "text": str(e)}
+            yield {"type": "step", "text": tb[:400]}
 
     return _sse_thread(gen)
 
@@ -1021,6 +1154,46 @@ async def admin_stats(admin: db.User = Depends(require_admin)):
         "analyses_today": await db.count_analyses_today(),
         "recent_users": await db.get_recent_users(limit=20),
     }
+
+
+@app.get("/api/admin/analysis-logs")
+async def admin_analysis_logs(
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+    admin: db.User = Depends(require_admin),
+):
+    return await db.list_analysis_logs(limit=limit, offset=offset)
+
+
+@app.get("/api/admin/active-users")
+async def admin_active_users(
+    period: str = Query("week"),
+    limit: int = Query(50, le=200),
+    admin: db.User = Depends(require_admin),
+):
+    return await db.get_active_users_ranking(period=period, limit=limit)
+
+
+# ---------------------------------------------------------------------------
+# CF API proxy (bypass Cloudflare on server)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/cf-proxy/user.info")
+async def cf_proxy_user_info(handles: str, user: db.User = Depends(require_user)):
+    async with httpx.AsyncClient(timeout=15, headers=_CF_HEADERS) as c:
+        r = await c.get(f"{_CF_API}/user.info", params={"handles": handles})
+        if r.headers.get("content-type", "").startswith("text/html"):
+            raise HTTPException(502, "CF API blocked by Cloudflare")
+        return r.json()
+
+
+@app.get("/api/cf-proxy/user.rating")
+async def cf_proxy_user_rating(handle: str, user: db.User = Depends(require_user)):
+    async with httpx.AsyncClient(timeout=15, headers=_CF_HEADERS) as c:
+        r = await c.get(f"{_CF_API}/user.rating", params={"handle": handle})
+        if r.headers.get("content-type", "").startswith("text/html"):
+            raise HTTPException(502, "CF API blocked by Cloudflare")
+        return r.json()
 
 
 # ---------------------------------------------------------------------------

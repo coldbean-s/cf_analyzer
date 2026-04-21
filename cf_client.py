@@ -292,8 +292,28 @@ class CFClient:
         if not problem_name:
             return None
 
+        def _norm_lang(lang: str) -> str:
+            l = lang.lower()
+            if "c++" in l or "gcc" in l or "g++" in l or "clang++" in l:
+                return "cpp"
+            if "python" in l or "pypy" in l:
+                return "python"
+            if "java" in l and "javascript" not in l:
+                return "java"
+            if "kotlin" in l:
+                return "kotlin"
+            if "rust" in l:
+                return "rust"
+            if "c#" in l or "csharp" in l or "mono c" in l:
+                return "csharp"
+            if "javascript" in l or "node" in l:
+                return "js"
+            if "go " in l or l.startswith("go"):
+                return "go"
+            return l
+
         def _match_lang(s):
-            return language_filter is None or language_filter.lower() in s["programmingLanguage"].lower()
+            return language_filter is None or _norm_lang(language_filter) == _norm_lang(s["programmingLanguage"])
 
         pname_lower = problem_name.strip().lower()
         for i, handle in enumerate(handles):
