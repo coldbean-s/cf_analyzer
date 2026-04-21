@@ -88,7 +88,7 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
 .stat-card-sub{font-size:11px;color:var(--text-dim)}
 
 /* ── PAGES ── */
-.page{display:none;height:100vh;padding-top:48px;flex-direction:column}
+.page{display:none;height:100vh;padding-top:48px;flex-direction:column;overflow-y:auto}
 .page.active{display:flex}
 
 /* ── TOP BAR ── */
@@ -425,6 +425,64 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
 .cold-banner{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--accent-dim);border-bottom:1px solid var(--accent-light);flex-shrink:0;font-size:13px;color:var(--text-mid)}
 .cold-banner strong{color:var(--accent)}
 .placeholder-page{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:14px}
+
+/* ══ LOGIN PAGE (dark, self-contained) ══ */
+#login-overlay{--lo-bg:#111118;--lo-surface:rgba(26,26,37,.82);--lo-border:rgba(255,255,255,.08);--lo-text:#E5E5E7;--lo-text-mid:#A0A0AB;--lo-text-dim:#5A5A67;--lo-accent:#F59E0B;--lo-accent-dim:rgba(245,158,11,.08);--lo-green:#22C55E;--lo-green-bg:rgba(34,197,94,.12);--lo-red:#EF4444;--lo-red-bg:rgba(239,68,68,.12);--lo-orange:#F59E0B;--lo-orange-bg:rgba(245,158,11,.12);--lo-blue:#3B82F6}
+#login-overlay{position:fixed;inset:0;z-index:9999;background:var(--lo-bg);color:var(--lo-text)}
+.lo-report-bg{position:fixed;inset:0;overflow:hidden;filter:blur(2px) brightness(.35);pointer-events:none}
+.lo-report-inner{padding:30px 50px;animation:lo-scroll 40s linear infinite}
+@keyframes lo-scroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
+.lo-r-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.lo-r-badge{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--lo-accent);background:var(--lo-accent-dim);padding:5px 12px;border-radius:6px}
+.lo-r-title{font-size:15px;font-weight:700;color:var(--lo-text)}
+.lo-r-sub{font-size:11px;color:var(--lo-text-dim);font-family:'JetBrains Mono',monospace;margin-left:auto}
+.lo-r-codes{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--lo-border);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.lo-r-cp{min-width:0}
+.lo-r-cp+.lo-r-cp{border-left:1px solid var(--lo-border)}
+.lo-r-cp-head{display:flex;align-items:center;gap:6px;padding:7px 12px;background:rgba(26,26,37,.6);border-bottom:1px solid var(--lo-border)}
+.lo-r-cp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.lo-r-cp-label.mine{color:var(--lo-blue)}
+.lo-r-cp-label.boss{color:var(--lo-green)}
+.lo-r-cp-meta{font-size:10px;color:var(--lo-text-dim);font-family:'JetBrains Mono',monospace;margin-left:auto}
+.lo-r-cp-pill{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:2px 6px;border-radius:99px}
+.lo-r-cp-pill.long{background:var(--lo-orange-bg);color:var(--lo-orange)}
+.lo-r-cp-pill.short{background:var(--lo-green-bg);color:var(--lo-green)}
+.lo-r-code{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;padding:8px 12px;color:#6a6a80;background:#0e0e16;min-height:100px}
+.lo-r-code .hl{color:#C8C8D0}
+.lo-r-ln{color:#3A3A4A;display:inline-block;width:22px;text-align:right;margin-right:8px;user-select:none}
+.lo-r-divider{font-size:11px;font-weight:700;color:var(--lo-text-dim);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px;display:flex;align-items:center;gap:10px}
+.lo-r-divider::after{content:'';flex:1;height:1px;background:var(--lo-border)}
+.lo-r-anns{display:flex;flex-direction:column;gap:6px;margin-bottom:50px}
+.lo-r-ann{display:flex;gap:10px;padding:12px 14px;background:rgba(26,26,37,.6);border:1px solid var(--lo-border);border-radius:10px}
+.lo-r-ann-n{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.lo-r-ann-n.critical{background:var(--lo-red);color:#fff}
+.lo-r-ann-n.warn{background:var(--lo-orange);color:#000}
+.lo-r-ann-n.good{background:var(--lo-green);color:#000}
+.lo-r-ann-c{flex:1;min-width:0}
+.lo-r-ann-head{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.lo-r-ann-title{font-size:12px;font-weight:700;color:var(--lo-text)}
+.lo-r-sev{font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;font-family:'JetBrains Mono',monospace}
+.lo-r-sev.critical{background:var(--lo-red-bg);color:var(--lo-red)}
+.lo-r-sev.warn{background:var(--lo-orange-bg);color:var(--lo-orange)}
+.lo-r-sev.good{background:var(--lo-green-bg);color:var(--lo-green)}
+.lo-r-ann-loc{font-size:10px;color:var(--lo-text-dim);font-family:'JetBrains Mono',monospace;margin-bottom:3px}
+.lo-r-ann-desc{font-size:11px;color:var(--lo-text-mid);line-height:1.6}
+.lo-r-ann-desc code{font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--lo-accent-dim);padding:1px 4px;border-radius:3px;color:var(--lo-accent)}
+.lo-r-ann-desc strong{color:var(--lo-text)}
+.lo-vignette{position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at center,rgba(17,17,24,.2) 0%,rgba(17,17,24,.75) 70%,rgba(17,17,24,.95) 100%)}
+.lo-card-wrap{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center}
+.lo-card{width:380px;background:var(--lo-surface);backdrop-filter:blur(24px) saturate(1.2);-webkit-backdrop-filter:blur(24px) saturate(1.2);border:1px solid var(--lo-border);border-radius:20px;padding:40px 36px;box-shadow:0 24px 64px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04) inset;text-align:center}
+.lo-logo{font-size:28px;font-weight:700;margin-bottom:4px;letter-spacing:-.3px;color:var(--lo-text)}
+.lo-logo span{color:var(--lo-accent)}
+.lo-tagline{font-size:13px;color:var(--lo-text-dim);margin-bottom:8px}
+.lo-desc{font-size:13px;color:var(--lo-text-mid);line-height:1.7;margin-bottom:28px}
+.lo-desc strong{color:var(--lo-accent);font-weight:600}
+.lo-gh-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px 20px;background:#f5f5f5;border:none;border-radius:12px;color:#24292F;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.2);text-decoration:none}
+.lo-gh-btn:hover{background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.3);transform:translateY(-1px)}
+.lo-gh-btn svg{width:20px;height:20px;fill:currentColor}
+.lo-perks{margin-top:24px;display:flex;flex-direction:column;gap:8px;text-align:left;padding:0 8px}
+.lo-perk{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--lo-text-dim)}
+.lo-perk-check{color:var(--lo-green);font-size:12px;flex-shrink:0;font-weight:700}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/base16/tomorrow-night.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -456,18 +514,124 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
 </nav>
 
 <!-- Login overlay -->
-<div id="login-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);align-items:center;justify-content:center">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px 36px;max-width:380px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
-    <h2 style="margin:0 0 8px;font-size:20px;color:var(--text-hi)">CF Analyzer</h2>
-    <p style="color:var(--text-mid);font-size:13px;margin:0 0 24px">算法竞赛代码对比分析平台</p>
-    <a href="/auth/github" style="display:inline-flex;align-items:center;gap:8px;background:#24292e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500">
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+<div id="login-overlay" style="display:none">
+<div class="lo-report-bg"><div class="lo-report-inner">
+<!-- Report 1 -->
+<div class="lo-r-header"><span class="lo-r-badge">1950E</span><span class="lo-r-title">Nearly Shortest Repeating Substring</span><span class="lo-r-sub">vs tourist</span></div>
+<div class="lo-r-codes"><div class="lo-r-cp"><div class="lo-r-cp-head"><span class="lo-r-cp-label mine">我的代码</span><span class="lo-r-cp-meta">C++</span><span class="lo-r-cp-pill long">68 行</span></div><div class="lo-r-code"><span class="lo-r-ln">1</span><span class="hl">#include &lt;bits/stdc++.h&gt;</span>
+<span class="lo-r-ln">2</span>using namespace std;
+<span class="lo-r-ln">3</span><span class="hl">void solve() {</span>
+<span class="lo-r-ln">4</span>    int n; string s;
+<span class="lo-r-ln">5</span>    cin >> n >> s;
+<span class="lo-r-ln">6</span>    vector&lt;int&gt; fail(n, 0);
+<span class="lo-r-ln">7</span>    for (int i=1; i&lt;n; i++) {
+<span class="lo-r-ln">8</span>        int j = fail[i-1];
+<span class="lo-r-ln">9</span>        while (j>0 && s[i]!=s[j])
+<span class="lo-r-ln">10</span>            j = fail[j-1];</div></div><div class="lo-r-cp"><div class="lo-r-cp-head"><span class="lo-r-cp-label boss">tourist</span><span class="lo-r-cp-meta">C++</span><span class="lo-r-cp-pill short">25 行</span></div><div class="lo-r-code"><span class="lo-r-ln">1</span><span class="hl">#include &lt;bits/stdc++.h&gt;</span>
+<span class="lo-r-ln">2</span>using namespace std;
+<span class="lo-r-ln">3</span><span class="hl">void solve() {</span>
+<span class="lo-r-ln">4</span>    int n; string s;
+<span class="lo-r-ln">5</span>    cin >> n >> s;
+<span class="lo-r-ln">6</span>    vector&lt;int&gt; f(n, 0);
+<span class="lo-r-ln">7</span>    for (int i=1; i&lt;n; i++) {
+<span class="lo-r-ln">8</span>        int j = f[i-1];
+<span class="lo-r-ln">9</span>        while (j && s[i]!=s[j])
+<span class="lo-r-ln">10</span>            j = f[j-1];</div></div></div>
+<div class="lo-r-divider">发现 · 3 项</div>
+<div class="lo-r-anns">
+  <div class="lo-r-ann"><div class="lo-r-ann-n critical">1</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">因子枚举不完整，漏掉大因子</span><span class="lo-r-sev critical">关键差距</span></div><div class="lo-r-ann-loc">你的第 18-19 行 -> tourist 第 14 行</div><div class="lo-r-ann-desc">你只枚举 <code>d*d&lt;=n</code>，漏掉大因子。tourist 直接线性枚举，<strong>消除了后续所有补丁逻辑。</strong></div></div></div>
+  <div class="lo-r-ann"><div class="lo-r-ann-n warn">2</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">三段特判可以合并为零分支</span><span class="lo-r-sev warn">可优化</span></div><div class="lo-r-ann-loc">你的第 23/28/37 行 -> tourist 第 15 行</div><div class="lo-r-ann-desc">tourist 用 <code>n%d>1</code> 一行 skip，<strong>三个分支变零分支。</strong></div></div></div>
+  <div class="lo-r-ann"><div class="lo-r-ann-n good">3</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">KMP 实现正确，与大佬一致</span><span class="lo-r-sev good">值得学习</span></div><div class="lo-r-ann-loc">你的第 6-13 行</div><div class="lo-r-ann-desc"><strong>算法基础扎实</strong>，差距在工程实现的简洁性。</div></div></div>
+</div>
+<!-- Report 2 -->
+<div class="lo-r-header"><span class="lo-r-badge">2094F</span><span class="lo-r-title">Palindrome Partition</span><span class="lo-r-sub">vs jiangly</span></div>
+<div class="lo-r-codes"><div class="lo-r-cp"><div class="lo-r-cp-head"><span class="lo-r-cp-label mine">我的代码</span><span class="lo-r-cp-meta">C++</span><span class="lo-r-cp-pill long">92 行</span></div><div class="lo-r-code"><span class="lo-r-ln">1</span><span class="hl">#include &lt;bits/stdc++.h&gt;</span>
+<span class="lo-r-ln">2</span>using namespace std;
+<span class="lo-r-ln">3</span>int main() {
+<span class="lo-r-ln">4</span>    int t; cin >> t;
+<span class="lo-r-ln">5</span>    while (t--) {
+<span class="lo-r-ln">6</span>        int n; cin >> n;
+<span class="lo-r-ln">7</span>        string s; cin >> s;
+<span class="lo-r-ln">8</span>        // Manacher's algorithm
+<span class="lo-r-ln">9</span>        vector&lt;int&gt; d1(n), d2(n);</div></div><div class="lo-r-cp"><div class="lo-r-cp-head"><span class="lo-r-cp-label boss">jiangly</span><span class="lo-r-cp-meta">C++</span><span class="lo-r-cp-pill short">41 行</span></div><div class="lo-r-code"><span class="lo-r-ln">1</span><span class="hl">#include &lt;bits/stdc++.h&gt;</span>
+<span class="lo-r-ln">2</span>using namespace std;
+<span class="lo-r-ln">3</span>void solve() {
+<span class="lo-r-ln">4</span>    int n; cin >> n;
+<span class="lo-r-ln">5</span>    string s; cin >> s;
+<span class="lo-r-ln">6</span>    // eertree (palindromic tree)
+<span class="lo-r-ln">7</span>    struct Node {
+<span class="lo-r-ln">8</span>        int len, link;
+<span class="lo-r-ln">9</span>        map&lt;char,int&gt; ch;</div></div></div>
+<div class="lo-r-divider">发现 · 4 项</div>
+<div class="lo-r-anns">
+  <div class="lo-r-ann"><div class="lo-r-ann-n critical">1</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">算法选择：Manacher vs 回文树</span><span class="lo-r-sev critical">关键差距</span></div><div class="lo-r-ann-loc">你的第 8 行 -> jiangly 第 6-7 行</div><div class="lo-r-ann-desc">jiangly 用 eertree 天然支持增量构建，<strong>代码量少一半。</strong></div></div></div>
+  <div class="lo-r-ann"><div class="lo-r-ann-n warn">2</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">DP 转移可用前缀和优化</span><span class="lo-r-sev warn">可优化</span></div><div class="lo-r-ann-loc">你的第 45-60 行</div><div class="lo-r-ann-desc">内层循环 O(n^2)，维护前缀和可以降到 O(n)。</div></div></div>
+  <div class="lo-r-ann"><div class="lo-r-ann-n good">3</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">Manacher 实现正确且高效</span><span class="lo-r-sev good">做得好</span></div><div class="lo-r-ann-loc">你的第 8-25 行</div><div class="lo-r-ann-desc"><strong>回文算法基础扎实。</strong></div></div></div>
+  <div class="lo-r-ann"><div class="lo-r-ann-n good">4</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">边界处理干净</span><span class="lo-r-sev good">做得好</span></div><div class="lo-r-ann-loc">你的第 30-35 行</div><div class="lo-r-ann-desc">空串和单字符边界无冗余，<strong>比 jiangly 的更显式可读。</strong></div></div></div>
+</div>
+<!-- Report 3 -->
+<div class="lo-r-header"><span class="lo-r-badge">1984D</span><span class="lo-r-title">XOR of Sums</span><span class="lo-r-sub">vs ecnerwala</span></div>
+<div class="lo-r-codes"><div class="lo-r-cp"><div class="lo-r-cp-head"><span class="lo-r-cp-label mine">我的代码</span><span class="lo-r-cp-meta">C++</span><span class="lo-r-cp-pill long">55 行</span></div><div class="lo-r-code"><span class="lo-r-ln">1</span><span class="hl">#include &lt;bits/stdc++.h&gt;</span>
+<span class="lo-r-ln">2</span>using namespace std;
+<span class="lo-r-ln">3</span>typedef long long ll;
+<span class="lo-r-ln">4</span>void solve() {
+<span class="lo-r-ln">5</span>    int n; cin >> n;
+<span class="lo-r-ln">6</span>    vector&lt;ll&gt; a(n);
+<span class="lo-r-ln">7</span>    for (auto &amp;x : a) cin >> x;
+<span class="lo-r-ln">8</span>    // prefix sums
+<span class="lo-r-ln">9</span>    vector&lt;ll&gt; pre(n+1, 0);</div></div><div class="lo-r-cp"><div class="lo-r-cp-head"><span class="lo-r-cp-label boss">ecnerwala</span><span class="lo-r-cp-meta">C++</span><span class="lo-r-cp-pill short">28 行</span></div><div class="lo-r-code"><span class="lo-r-ln">1</span><span class="hl">#include &lt;bits/stdc++.h&gt;</span>
+<span class="lo-r-ln">2</span>using namespace std;
+<span class="lo-r-ln">3</span>int main() {
+<span class="lo-r-ln">4</span>    int t; cin >> t;
+<span class="lo-r-ln">5</span>    while (t--) {
+<span class="lo-r-ln">6</span>        int n; cin >> n;
+<span class="lo-r-ln">7</span>        vector&lt;long long&gt; a(n);
+<span class="lo-r-ln">8</span>        for (auto &amp;x : a) cin >> x;
+<span class="lo-r-ln">9</span>        // bit-by-bit approach</div></div></div>
+<div class="lo-r-divider">发现 · 3 项</div>
+<div class="lo-r-anns">
+  <div class="lo-r-ann"><div class="lo-r-ann-n critical">1</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">思路不同：前缀和暴力 vs 按位贡献</span><span class="lo-r-sev critical">关键差距</span></div><div class="lo-r-ann-loc">你的第 8 行 -> ecnerwala 第 9 行</div><div class="lo-r-ann-desc">ecnerwala 按位拆分问题，<strong>复杂度从 O(n^2) 降到 O(n log V)。</strong></div></div></div>
+  <div class="lo-r-ann"><div class="lo-r-ann-n warn">2</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">取模位置不当导致溢出风险</span><span class="lo-r-sev warn">可优化</span></div><div class="lo-r-ann-loc">你的第 20-22 行</div><div class="lo-r-ann-desc">中间结果可能溢出 <code>long long</code>，应在累加时取模。</div></div></div>
+  <div class="lo-r-ann"><div class="lo-r-ann-n good">3</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">输入输出模板规范</span><span class="lo-r-sev good">做得好</span></div><div class="lo-r-ann-loc">你的第 1-7 行</div><div class="lo-r-ann-desc"><strong>代码模板整洁</strong>，快读快写使用恰当。</div></div></div>
+</div>
+<!-- Duplicate for seamless loop -->
+<div class="lo-r-header"><span class="lo-r-badge">1950E</span><span class="lo-r-title">Nearly Shortest Repeating Substring</span><span class="lo-r-sub">vs tourist</span></div>
+<div class="lo-r-codes"><div class="lo-r-cp"><div class="lo-r-cp-head"><span class="lo-r-cp-label mine">我的代码</span><span class="lo-r-cp-meta">C++</span><span class="lo-r-cp-pill long">68 行</span></div><div class="lo-r-code"><span class="lo-r-ln">1</span><span class="hl">#include &lt;bits/stdc++.h&gt;</span>
+<span class="lo-r-ln">2</span>using namespace std;
+<span class="lo-r-ln">3</span><span class="hl">void solve() {</span>
+<span class="lo-r-ln">4</span>    int n; string s;
+<span class="lo-r-ln">5</span>    cin >> n >> s;</div></div><div class="lo-r-cp"><div class="lo-r-cp-head"><span class="lo-r-cp-label boss">tourist</span><span class="lo-r-cp-meta">C++</span><span class="lo-r-cp-pill short">25 行</span></div><div class="lo-r-code"><span class="lo-r-ln">1</span><span class="hl">#include &lt;bits/stdc++.h&gt;</span>
+<span class="lo-r-ln">2</span>using namespace std;
+<span class="lo-r-ln">3</span><span class="hl">void solve() {</span>
+<span class="lo-r-ln">4</span>    int n; string s;
+<span class="lo-r-ln">5</span>    cin >> n >> s;</div></div></div>
+<div class="lo-r-divider">发现 · 3 项</div>
+<div class="lo-r-anns">
+  <div class="lo-r-ann"><div class="lo-r-ann-n critical">1</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">因子枚举不完整，漏掉大因子</span><span class="lo-r-sev critical">关键差距</span></div><div class="lo-r-ann-loc">你的第 18-19 行 -> tourist 第 14 行</div><div class="lo-r-ann-desc">你只枚举 <code>d*d&lt;=n</code>，漏掉大因子。tourist 直接线性枚举，<strong>消除了后续所有补丁逻辑。</strong></div></div></div>
+  <div class="lo-r-ann"><div class="lo-r-ann-n warn">2</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">三段特判可以合并为零分支</span><span class="lo-r-sev warn">可优化</span></div><div class="lo-r-ann-loc">你的第 23/28/37 行 -> tourist 第 15 行</div><div class="lo-r-ann-desc">tourist 用 <code>n%d>1</code> 一行 skip，<strong>三个分支变零分支。</strong></div></div></div>
+  <div class="lo-r-ann"><div class="lo-r-ann-n good">3</div><div class="lo-r-ann-c"><div class="lo-r-ann-head"><span class="lo-r-ann-title">KMP 实现正确，与大佬一致</span><span class="lo-r-sev good">值得学习</span></div><div class="lo-r-ann-loc">你的第 6-13 行</div><div class="lo-r-ann-desc"><strong>算法基础扎实</strong>，差距在工程实现的简洁性。</div></div></div>
+</div>
+</div></div>
+<div class="lo-vignette"></div>
+<div class="lo-card-wrap">
+  <div class="lo-card">
+    <div class="lo-logo">CF <span>Analyzer</span></div>
+    <div class="lo-tagline">Codeforces 代码对比分析</div>
+    <div class="lo-desc">
+      和 <strong>tourist</strong>、<strong>jiangly</strong>、<strong>ecnerwala</strong> 的代码比一比<br>
+      AI 帮你找到每一个可以进步的地方
+    </div>
+    <a class="lo-gh-btn" href="/auth/github">
+      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
       使用 GitHub 登录
     </a>
-    <div style="margin-top:20px;color:var(--text-dim);font-size:11px;line-height:1.6">
-      <div>保存分析历史 · 个人 LLM 配置 · 数据云端同步</div>
+    <div class="lo-perks">
+      <div class="lo-perk"><span class="lo-perk-check">&#10003;</span>分析历史永久保存</div>
+      <div class="lo-perk"><span class="lo-perk-check">&#10003;</span>自定义 LLM + 大佬列表</div>
+      <div class="lo-perk"><span class="lo-perk-check">&#10003;</span>综合对比最多 10 人</div>
     </div>
   </div>
+</div>
 </div>
 
 <!-- ═══ PENDING ═══ -->
@@ -1305,13 +1469,13 @@ function checkAuth(){
     if(u.is_admin)document.getElementById('nav-admin-tab').style.display='';
     loadPending();
   }).catch(function(){
-    document.getElementById('login-overlay').style.display='flex';
+    document.getElementById('login-overlay').style.display='block';
   });
 }
 function logout(){
   fetch('/auth/logout',{method:'POST'}).then(function(){
     currentUser=null;
-    document.getElementById('login-overlay').style.display='flex';
+    document.getElementById('login-overlay').style.display='block';
     document.getElementById('nav-user').style.display='none';
   });
 }
@@ -1321,7 +1485,7 @@ var _origFetch=window.fetch;
 window.fetch=function(){
   return _origFetch.apply(this,arguments).then(function(r){
     if(r.status===401&&!r.url.includes('/api/me')){
-      document.getElementById('login-overlay').style.display='flex';
+      document.getElementById('login-overlay').style.display='block';
     }
     return r;
   });
