@@ -103,7 +103,7 @@ class LLMClient:
             ds = cfg.get("deepseek", {})
             self._client = OpenAI(
                 api_key=ds["api_key"],
-                base_url="https://api.deepseek.com",
+                base_url=ds.get("base_url") or "https://api.deepseek.com",
             )
             self.model = ds.get("model", "deepseek-chat")
         else:

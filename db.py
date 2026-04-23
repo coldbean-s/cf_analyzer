@@ -62,6 +62,7 @@ class UserConfig(Base):
     claude_base_url = Column(String, default="")
     claude_model = Column(String, default="claude-sonnet-4-6")
     deepseek_api_key_enc = Column(String, default="")
+    deepseek_base_url = Column(String, default="")
     deepseek_model = Column(String, default="deepseek-chat")
     cf_handle = Column(String, default="")
     same_language_only = Column(Boolean, default=True)

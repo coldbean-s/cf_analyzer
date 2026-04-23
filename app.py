@@ -131,6 +131,7 @@ async def build_user_cfg(user_id: int) -> dict:
         },
         "deepseek": {
             "api_key": ds_key,
+            "base_url": uc.deepseek_base_url or "",
             "model": uc.deepseek_model or "deepseek-chat",
         },
         "settings": {
@@ -259,6 +260,7 @@ async def get_config(user: db.User = Depends(require_user)):
         "claude_base_url":    uc.claude_base_url or "",
         "claude_model":       uc.claude_model or "claude-sonnet-4-6",
         "deepseek_api_key":   _mask(ds_key),
+        "deepseek_base_url":  uc.deepseek_base_url or "",
         "deepseek_model":     uc.deepseek_model or "deepseek-chat",
         "same_language_only": uc.same_language_only if uc.same_language_only is not None else True,
         "lgm_handles":        uc.lgm_handles or [],
@@ -266,6 +268,30 @@ async def get_config(user: db.User = Depends(require_user)):
         "compare_mode":       uc.compare_mode or "auto",
         "compare_target":     uc.compare_target or "",
         "compare_targets":    uc.compare_targets or [],
+    }
+
+
+@app.get("/api/config/setup-status")
+async def setup_status(user: db.User = Depends(require_user)):
+    uc = await db.get_user_config(user.id)
+    active = uc.active_llm or "claude"
+    has_llm = bool(
+        (active == "claude" and uc.claude_api_key_enc)
+        or (active == "deepseek" and uc.deepseek_api_key_enc)
+        or config.DEFAULT_LLM_KEY
+    )
+    has_handle = bool(uc.cf_handle)
+    has_lgm = bool(uc.lgm_handles and len(uc.lgm_handles) > 0)
+    has_cold_start = False
+    if has_handle:
+        ss = await db.get_sync_state(uc.cf_handle, user_id=user.id)
+        has_cold_start = bool(ss["cold_start_done"])
+    return {
+        "has_handle": has_handle,
+        "has_llm": has_llm,
+        "has_lgm": has_lgm,
+        "has_cold_start": has_cold_start,
+        "all_done": has_handle and has_llm and has_lgm and has_cold_start,
     }
 
 
@@ -290,8 +316,9 @@ async def save_llm(body: LLMConfig, user: db.User = Depends(require_user)):
 
 
 class DeepSeekConfig(BaseModel):
-    api_key: Optional[str] = None
-    model:   Optional[str] = None
+    api_key:  Optional[str] = None
+    base_url: Optional[str] = None
+    model:    Optional[str] = None
 
 
 @app.put("/api/config/deepseek")
@@ -299,6 +326,8 @@ async def save_deepseek(body: DeepSeekConfig, user: db.User = Depends(require_us
     updates = {}
     if body.api_key and not _is_masked(body.api_key):
         updates["deepseek_api_key_enc"] = crypto.encrypt(body.api_key)
+    if body.base_url is not None:
+        updates["deepseek_base_url"] = body.base_url
     if body.model:
         updates["deepseek_model"] = body.model
     if updates:
@@ -430,8 +459,10 @@ async def save_compare_mode(body: CompareModeBody, user: db.User = Depends(requi
 # ---------------------------------------------------------------------------
 
 @app.post("/api/test/llm")
-async def test_llm(user: db.User = Depends(require_user)):
+async def test_llm(user: db.User = Depends(require_user), llm: str | None = None):
     cfg = await build_user_cfg(user.id)
+    if llm in ("claude", "deepseek"):
+        cfg["settings"]["active_llm"] = llm
 
     def gen():
         active = cfg["settings"]["active_llm"]
@@ -439,13 +470,14 @@ async def test_llm(user: db.User = Depends(require_user)):
         try:
             if active == "deepseek":
                 api_key = cfg["deepseek"]["api_key"]
+                base_url = cfg["deepseek"].get("base_url") or "https://api.deepseek.com"
                 model = cfg["deepseek"]["model"]
                 if not api_key:
                     yield {"type": "fail", "text": "未配置 DeepSeek API Key"}
                     return
                 yield {"type": "step", "text": f"目标模型：{model}"}
                 from openai import OpenAI
-                client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+                client = OpenAI(api_key=api_key, base_url=base_url)
                 yield {"type": "step", "text": "发送测试消息..."}
                 t0 = time.time()
                 client.chat.completions.create(
@@ -900,9 +932,16 @@ async def style_review_sse(contest_id: int, index: str, user: db.User = Depends(
             alog.step("exception", "error", str(e))
             alog.finish("error", model=active_llm, error=str(e))
             tb = traceback.format_exc()
+            err_lower = str(e).lower()
             is_browser_err = any(k in tb for k in ("page.goto", "playwright", "Cloudflare", "TimeoutError", "net::ERR_"))
+            is_llm_auth = any(k in err_lower for k in ("401", "403", "unauthorized", "invalid api key", "authentication", "invalid x-api-key"))
+            is_llm_quota = any(k in err_lower for k in ("429", "rate limit", "quota", "insufficient"))
             if is_browser_err:
-                yield {"type": "fail", "text": "浏览器访问 CF 超时（偶发），如果之前生成过报告，可到「已完成」查看完整报告"}
+                yield {"type": "fail", "text": "浏览器访问 CF 超时（偶发），可稍后重试"}
+            elif is_llm_auth:
+                yield {"type": "fail", "text": f"LLM API Key 无效或已过期（{active_llm}），请在「配置」页检查"}
+            elif is_llm_quota:
+                yield {"type": "fail", "text": f"LLM API 额度不足或限流（{active_llm}），请检查账户余额"}
             else:
                 yield {"type": "fail", "text": str(e)}
             yield {"type": "step", "text": tb[:400]}
@@ -938,10 +977,24 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
                               contest_id=contest_id, problem_index=index)
         active_llm = settings.get("active_llm", "claude")
         try:
+            if not handle:
+                alog.step("check_handle", "error", "empty cf_handle")
+                alog.finish("error", error="未配置 CF Handle")
+                yield {"type": "fail", "text": "未配置 CF Handle，请在「配置」页设置后重试"}
+                return
+
             if not lgm_handles:
                 alog.step("check_handles", "error", "empty")
                 alog.finish("error", error="未配置大佬 handle")
-                yield {"type": "fail", "text": "未配置大佬 handle，请在设置页添加"}
+                yield {"type": "fail", "text": "未配置大佬 handle，请在「配置」页添加后重试"}
+                return
+
+            llm_key = cfg.get(active_llm, {}).get("api_key", "")
+            if not llm_key:
+                label = "Claude" if active_llm == "claude" else "DeepSeek"
+                alog.step("check_llm", "error", f"no {active_llm} api_key")
+                alog.finish("error", error=f"未配置 {label} API Key")
+                yield {"type": "fail", "text": f"未配置 {label} API Key，请在「配置」页设置后重试"}
                 return
 
             analysis = _sync_db(db.get_analysis_by_problem(handle, contest_id, index, user_id=uid))
@@ -1131,9 +1184,16 @@ async def full_review_sse(contest_id: int, index: str, user: db.User = Depends(r
             alog.step("exception", "error", str(e))
             alog.finish("error", model=active_llm, error=str(e))
             tb = traceback.format_exc()
+            err_lower = str(e).lower()
             is_browser_err = any(k in tb for k in ("page.goto", "playwright", "Cloudflare", "TimeoutError", "net::ERR_"))
+            is_llm_auth = any(k in err_lower for k in ("401", "403", "unauthorized", "invalid api key", "authentication", "invalid x-api-key"))
+            is_llm_quota = any(k in err_lower for k in ("429", "rate limit", "quota", "insufficient"))
             if is_browser_err:
-                yield {"type": "fail", "text": "浏览器访问 CF 超时（偶发），如果之前生成过报告，可到「已完成」查看完整报告"}
+                yield {"type": "fail", "text": "浏览器访问 CF 超时（偶发），可稍后重试"}
+            elif is_llm_auth:
+                yield {"type": "fail", "text": f"LLM API Key 无效或已过期（{active_llm}），请在「配置」页检查"}
+            elif is_llm_quota:
+                yield {"type": "fail", "text": f"LLM API 额度不足或限流（{active_llm}），请检查账户余额"}
             else:
                 yield {"type": "fail", "text": str(e)}
             yield {"type": "step", "text": tb[:400]}

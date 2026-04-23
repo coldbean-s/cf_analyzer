@@ -483,6 +483,22 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
 .lo-perks{margin-top:24px;display:flex;flex-direction:column;gap:8px;text-align:left;padding:0 8px}
 .lo-perk{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--lo-text-dim)}
 .lo-perk-check{color:var(--lo-green);font-size:12px;flex-shrink:0;font-weight:700}
+/* Setup Guide */
+.setup-guide{margin:12px 20px;border:1px solid var(--border);border-radius:10px;background:var(--surface);overflow:hidden}
+.setup-guide-header{display:flex;align-items:center;gap:8px;padding:14px 16px 10px}
+.setup-guide-title{font-size:14px;font-weight:600;color:var(--text-hi)}
+.setup-guide-sub{font-size:11px;color:var(--text-dim)}
+.setup-guide-close{margin-left:auto;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;padding:0 4px;line-height:1}
+.setup-guide-close:hover{color:var(--text)}
+.setup-steps{display:flex;flex-direction:column}
+.setup-step{display:flex;align-items:center;gap:12px;padding:10px 16px;border-top:1px solid var(--border)}
+.setup-step.done{opacity:.5}
+.setup-step.done .setup-action{display:none}
+.setup-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--border-hi);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px}
+.setup-step.done .setup-check{border-color:var(--accent);background:var(--accent);color:#fff}
+.setup-step-body{flex:1;min-width:0}
+.setup-step-title{display:block;font-size:12px;font-weight:600;color:var(--text)}
+.setup-step-desc{display:block;font-size:11px;color:var(--text-dim);margin-top:2px}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/base16/tomorrow-night.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -636,6 +652,47 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
 
 <!-- ═══ PENDING ═══ -->
 <div class="page active" id="page-pending">
+  <div class="setup-guide" id="setup-guide" style="display:none">
+    <div class="setup-guide-header">
+      <span class="setup-guide-title">快速开始</span>
+      <span class="setup-guide-sub">完成以下配置即可开始使用</span>
+      <button class="setup-guide-close" onclick="dismissSetupGuide()">&times;</button>
+    </div>
+    <div class="setup-steps">
+      <div class="setup-step" id="step-handle">
+        <span class="setup-check"></span>
+        <div class="setup-step-body">
+          <span class="setup-step-title">1. 设置 CF Handle</span>
+          <span class="setup-step-desc">填写你的 Codeforces 用户名，用于拉取你的提交记录</span>
+        </div>
+        <button class="btn setup-action" onclick="switchPage('config')" style="box-shadow:none;font-size:11px;flex-shrink:0">去设置</button>
+      </div>
+      <div class="setup-step" id="step-llm">
+        <span class="setup-check"></span>
+        <div class="setup-step-body">
+          <span class="setup-step-title">2. 配置 LLM</span>
+          <span class="setup-step-desc">填入 Claude 或 DeepSeek 的 API Key，用于 AI 分析</span>
+        </div>
+        <button class="btn setup-action" onclick="switchPage('config')" style="box-shadow:none;font-size:11px;flex-shrink:0">去设置</button>
+      </div>
+      <div class="setup-step" id="step-lgm">
+        <span class="setup-check"></span>
+        <div class="setup-step-body">
+          <span class="setup-step-title">3. 添加大佬列表</span>
+          <span class="setup-step-desc">添加你想对比的高手 handle（如 tourist、jiangly）</span>
+        </div>
+        <button class="btn setup-action" onclick="switchPage('config')" style="box-shadow:none;font-size:11px;flex-shrink:0">去设置</button>
+      </div>
+      <div class="setup-step" id="step-cold">
+        <span class="setup-check"></span>
+        <div class="setup-step-body">
+          <span class="setup-step-title">4. 冷启动</span>
+          <span class="setup-step-desc">拉取你的历史提交记录，之后就能看到待复盘题目了</span>
+        </div>
+        <button class="btn setup-action" onclick="showColdStart()" style="box-shadow:none;font-size:11px;flex-shrink:0">开始拉取</button>
+      </div>
+    </div>
+  </div>
   <div class="cold-banner" id="cold-banner" style="display:none">
     尚未初始化提交记录。请点击 <strong>冷启动</strong> 拉取历史提交。
     <button class="btn" style="margin-left:auto;box-shadow:none" onclick="showColdStart()">冷启动</button>
@@ -798,8 +855,8 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
           <div class="cfg-row">
             <span class="cfg-label">当前模型</span>
             <div class="cfg-radio-group">
-              <button class="cfg-radio active" onclick="switchLLM(this,'claude')">Claude</button>
-              <button class="cfg-radio" onclick="switchLLM(this,'deepseek')">DeepSeek</button>
+              <button class="cfg-radio active" data-llm="claude" onclick="switchLLM(this,'claude')">Claude</button>
+              <button class="cfg-radio" data-llm="deepseek" onclick="switchLLM(this,'deepseek')">DeepSeek</button>
             </div>
           </div>
 
@@ -824,6 +881,10 @@ nav{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px
             <div class="cfg-row">
               <span class="cfg-label">API Key</span>
               <input class="cfg-input" id="cfg-ds-key" type="password" placeholder="sk-...">
+            </div>
+            <div class="cfg-row">
+              <span class="cfg-label">Base URL</span>
+              <input class="cfg-input" id="cfg-ds-url" type="text" placeholder="留空使用默认">
             </div>
             <div class="cfg-row">
               <span class="cfg-label">Model</span>
@@ -991,6 +1052,7 @@ function loadConfig(){fetch('/api/config').then(function(r){return r.json()}).th
   document.getElementById('cfg-claude-url').value=c.claude_base_url||'';
   document.getElementById('cfg-claude-model').value=c.claude_model||'claude-sonnet-4-6';
   document.getElementById('cfg-ds-key').value=c.deepseek_api_key||'';
+  document.getElementById('cfg-ds-url').value=c.deepseek_base_url||'';
   document.getElementById('cfg-ds-model').value=c.deepseek_model||'deepseek-chat';
   document.getElementById('cfg-same-lang').checked=c.same_language_only!==false;
 
@@ -1004,9 +1066,9 @@ function loadConfig(){fetch('/api/config').then(function(r){return r.json()}).th
   if(c.cf_profile_exists)document.getElementById('cf-session-status').innerHTML='<span class="cfg-status-dot ok"></span> 已建立';
 }).catch(function(){})}
 function saveCfHandle(){var h=document.getElementById('cfg-cf-handle').value.trim();if(!h)return;fetch('/api/config/cf',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({handle:h})}).then(function(){alert('已保存')}).catch(function(){alert('保存失败')})}
-function saveLLM(){var active=document.querySelector('.cfg-radio.active').textContent.toLowerCase();fetch('/api/config/active-llm',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({active_llm:active})});if(active==='claude'){fetch('/api/config/llm',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_key:document.getElementById('cfg-claude-key').value,base_url:document.getElementById('cfg-claude-url').value,model:document.getElementById('cfg-claude-model').value})})}else{fetch('/api/config/deepseek',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_key:document.getElementById('cfg-ds-key').value,model:document.getElementById('cfg-ds-model').value})})}alert('已保存')}
+function saveLLM(){var active=document.querySelector('.cfg-radio.active').textContent.toLowerCase();fetch('/api/config/active-llm',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({active_llm:active})});if(active==='claude'){fetch('/api/config/llm',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_key:document.getElementById('cfg-claude-key').value,base_url:document.getElementById('cfg-claude-url').value,model:document.getElementById('cfg-claude-model').value})})}else{fetch('/api/config/deepseek',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_key:document.getElementById('cfg-ds-key').value,base_url:document.getElementById('cfg-ds-url').value,model:document.getElementById('cfg-ds-model').value})})}alert('已保存')}
 function saveSettings(){var el=document.getElementById('cfg-same-lang');fetch('/api/config/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({same_language_only:el.checked})}).then(function(){var tip=document.createElement('span');tip.textContent=el.checked?'已开启':'已关闭';tip.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#0f0;padding:6px 16px;border-radius:6px;font-size:13px;z-index:9999;border:1px solid #0f03';document.body.appendChild(tip);setTimeout(function(){tip.remove()},1500)})}
-function switchLLM(btn){document.querySelectorAll('.cfg-radio').forEach(function(r){r.classList.remove('active')});btn.classList.add('active')}
+function switchLLM(btn,llm){document.querySelectorAll('.cfg-radio').forEach(function(r){r.classList.remove('active')});btn.classList.add('active');fetch('/api/config/active-llm',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({active_llm:llm})})}
 
 /* LGM handles */
 function ratingClass(r){if(r>=3000)return'rate-lgm';if(r>=2400)return'rate-gm';if(r>=2100)return'rate-master';if(r>=1900)return'rate-cm';if(r>=1600)return'rate-expert';if(r>=1400)return'rate-spec';if(r>=1200)return'rate-pupil';return'rate-newbie'}
@@ -1157,7 +1219,7 @@ function loadCompareMode(cfg){
 }
 
 /* CF session (Web version: server shared session, no user-facing login) */
-function testLLM(){var btn=document.querySelector('[onclick="testLLM()"]');btn.disabled=true;btn.textContent='测试中...';readSSE('/api/test/llm',{method:'POST'},function(ev){if(ev.type==='ok')alert(ev.text);else if(ev.type==='fail')alert(ev.text)},function(){btn.disabled=false;btn.textContent='测试连接'})}
+function testLLM(){var btn=document.querySelector('[onclick="testLLM()"]');btn.disabled=true;btn.textContent='测试中...';var active=document.querySelector('.cfg-radio.active');var llm=active?active.dataset.llm:'';readSSE('/api/test/llm'+(llm?'?llm='+llm:''),{method:'POST'},function(ev){if(ev.type==='ok')alert(ev.text);else if(ev.type==='fail')alert(ev.text)},function(){btn.disabled=false;btn.textContent='测试连接'})}
 
 /* ═══ COLD START ═══ */
 function showColdStart(){fetch('/api/submissions/status').then(function(r){return r.json()}).then(function(s){document.getElementById('cold-handle').value=s.handle||''}).catch(function(){});document.getElementById('cold-progress').style.display='none';document.getElementById('cold-progress').textContent='';document.getElementById('btn-cold-go').disabled=false;document.getElementById('cold-modal').classList.add('open')}
@@ -1169,7 +1231,7 @@ function runColdStart(){var handle=document.getElementById('cold-handle').value.
 function refreshSubmissions(){var prog=document.getElementById('pending-sync-progress');prog.style.display='';prog.textContent='刷新中...';readSSE('/api/submissions/refresh',{method:'POST'},function(ev){if(ev.text)prog.textContent=ev.text},function(){setTimeout(function(){prog.style.display='none';loadPending()},2000)})}
 
 /* ═══ PENDING ═══ */
-function loadPending(){fetch('/api/submissions/status').then(function(r){return r.json()}).then(function(s){document.getElementById('cold-banner').style.display=s.cold_start_done?'none':''}).catch(function(){});var rmin=document.getElementById('pending-rmin').value,rmax=document.getElementById('pending-rmax').value;var params=new URLSearchParams();if(rmin)params.set('rating_min',rmin);if(rmax)params.set('rating_max',rmax);fetch('/api/problems/pending?'+params).then(function(r){return r.json()}).then(function(data){renderPending(data)}).catch(function(e){document.getElementById('list-ac').innerHTML='<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">'+e.message+'</div>'});fetch('/api/problems/reviewed').then(function(r){return r.json()}).then(function(rows){document.getElementById('stat-reviewed').textContent=rows.length}).catch(function(){})}
+function loadPending(){loadSetupGuide();var rmin=document.getElementById('pending-rmin').value,rmax=document.getElementById('pending-rmax').value;var params=new URLSearchParams();if(rmin)params.set('rating_min',rmin);if(rmax)params.set('rating_max',rmax);fetch('/api/problems/pending?'+params).then(function(r){return r.json()}).then(function(data){renderPending(data)}).catch(function(e){document.getElementById('list-ac').innerHTML='<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">'+e.message+'</div>'});fetch('/api/problems/reviewed').then(function(r){return r.json()}).then(function(rows){document.getElementById('stat-reviewed').textContent=rows.length}).catch(function(){})}
 function renderPending(data){var ac=data.ac_unreviewed||[],fail=data.failed||[];document.getElementById('count-ac').textContent=ac.length;document.getElementById('count-fail').textContent=fail.length;document.getElementById('stat-ac').textContent=ac.length;document.getElementById('stat-fail').textContent=fail.length;
 document.getElementById('list-ac').innerHTML=ac.length?ac.map(function(p){var rc=cfRatingClass(p.rating||0);return'<div class="prob-row" onclick="openCard(this)" data-contest="'+p.contest_id+'" data-index="'+p.problem_index+'" data-name="'+(p.problem_name||'')+'" data-rating="'+(p.rating||'')+'" data-lang="'+(p.language||'')+'"><span class="prob-verdict ac">AC</span><span class="prob-id '+rc+'">'+p.contest_id+p.problem_index+'</span><span class="prob-name">'+(p.problem_name||'')+'</span>'+(p.rating?'<span class="rating-badge '+rc+'">'+p.rating+'</span>':'')+'<span class="prob-lang">'+(p.language||'')+'</span>'+(p.style_review?'<span class="prob-tag style">已点评</span>':'')+'</div>'}).join(''):'<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">暂无</div>';
 document.getElementById('list-fail').innerHTML=fail.length?fail.map(function(p){var rc=cfRatingClass(p.rating||0);return'<div class="prob-row" onclick="openCard(this)" data-contest="'+p.contest_id+'" data-index="'+p.problem_index+'" data-name="'+(p.problem_name||'')+'" data-rating="'+(p.rating||'')+'" data-lang="'+(p.language||'')+'"><span class="prob-verdict wa">WA</span><span class="prob-id '+rc+'">'+p.contest_id+p.problem_index+'</span><span class="prob-name">'+(p.problem_name||'')+'</span>'+(p.rating?'<span class="rating-badge '+rc+'">'+p.rating+'</span>':'')+'<span class="prob-tag attempts">'+(p.attempt_count||'')+'次</span></div>'}).join(''):'<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">暂无</div>'}
@@ -1446,12 +1508,36 @@ function runFullReview(){
       document.querySelectorAll('.streaming-cursor').forEach(function(el){el.classList.remove('streaming-cursor');});
     } else if(ev.type==='fail'){
       if(streamRaf){cancelAnimationFrame(streamRaf);}
-      document.getElementById('full-progress').style.display='';
-      document.getElementById('full-progress').textContent=ev.text;
-      document.getElementById('full-progress').style.color='var(--red)';
+      var prog=document.getElementById('full-progress');
+      prog.style.display='';
+      prog.style.color='var(--red)';
+      var needCfg=ev.text.indexOf('\u914D\u7F6E')!==-1;
+      prog.innerHTML=ev.text+(needCfg?' <button class="btn" style="margin-left:8px;font-size:11px;padding:2px 10px;box-shadow:none" onclick="closeCard();switchPage(\'config\')">去配置</button>':'');
     }
   },function(){btn.disabled=false});
 }
+
+function switchPage(name){document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active')});document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});var tab=document.querySelector('.nav-tab[data-page="'+name+'"]');if(tab)tab.classList.add('active');document.getElementById('page-'+name).classList.add('active');if(name==='config')loadConfig();if(name==='pending')loadPending();if(name==='reviewed')loadReviewed();if(name==='records')loadRecords();if(name==='admin')loadAdmin()}
+
+/* ═══ SETUP GUIDE ═══ */
+function loadSetupGuide(){fetch('/api/config/setup-status').then(function(r){return r.json()}).then(function(s){
+  if(s.all_done||localStorage.getItem('cf-setup-dismissed')){
+    document.getElementById('setup-guide').style.display='none';
+    document.getElementById('cold-banner').style.display=s.has_cold_start?'none':'';
+    return;
+  }
+  document.getElementById('setup-guide').style.display='';
+  document.getElementById('cold-banner').style.display='none';
+  var map={handle:'has_handle',llm:'has_llm',lgm:'has_lgm',cold:'has_cold_start'};
+  Object.keys(map).forEach(function(key){
+    var el=document.getElementById('step-'+key);
+    if(s[map[key]]){el.classList.add('done');el.querySelector('.setup-check').innerHTML='\u2713'}
+    else{el.classList.remove('done');el.querySelector('.setup-check').innerHTML=''}
+  });
+}).catch(function(){
+  document.getElementById('setup-guide').style.display='none';
+})}
+function dismissSetupGuide(){document.getElementById('setup-guide').style.display='none';localStorage.setItem('cf-setup-dismissed','1')}
 
 /* ═══ AUTH ═══ */
 var currentUser=null;
